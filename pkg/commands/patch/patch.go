@@ -32,6 +32,11 @@ type Patch struct {
 	intralineOnce sync.Once
 	// per-hunk within-line diff ranges; see computeIntralineDiffs.
 	intralineDiffs [][]*byteRange
+
+	// lazily computed, same rationale as highlightOnce above.
+	splitRowsOnce sync.Once
+	// per-hunk split-view row layout; see computeSplitRows.
+	splitRows [][]splitRow
 }
 
 // Records the name of the file being diffed, for use in syntax
@@ -69,6 +74,21 @@ func (self *Patch) hunkIntralineDiffs(hunkIdx int) []*byteRange {
 		return nil
 	}
 	return self.intralineDiffs[hunkIdx]
+}
+
+// Returns the split-view row layout for the hunk at the given index, or nil
+// if the hunk index is out of range. See computeSplitRows: this is the
+// single source of truth for split-mode row counting, shared by the
+// renderer and (eventually) the interactive cursor.
+func (self *Patch) hunkSplitRows(hunkIdx int) []splitRow {
+	self.splitRowsOnce.Do(func() {
+		self.splitRows = computeSplitRows(self.hunks)
+	})
+
+	if hunkIdx < 0 || hunkIdx >= len(self.splitRows) {
+		return nil
+	}
+	return self.splitRows[hunkIdx]
 }
 
 // Returns a new patch with the specified transformation applied (e.g.
@@ -292,6 +312,29 @@ func (self *Patch) GutterWidth(showLineNumbers bool) int {
 
 	// one column per side, plus a trailing space after each
 	return oldWidth + 1 + newWidth + 1
+}
+
+// Returns the width of a single-column line-number gutter for one side (old
+// or new) of the split view, or 0 if line numbers aren't shown. Unlike
+// GutterWidth (which returns a combined old+new width for the unified
+// view's single two-number gutter), split mode renders old and new in
+// separate columns, each needing only its own side's digit width.
+func (self *Patch) SplitGutterWidth(showLineNumbers bool, oldSide bool) int {
+	if !showLineNumbers {
+		return 0
+	}
+
+	oldWidth, newWidth := self.LineNumberColumnWidths()
+	width := newWidth
+	if oldSide {
+		width = oldWidth
+	}
+	if width == 0 {
+		return 0
+	}
+
+	// one column plus a trailing space
+	return width + 1
 }
 
 func (self *Patch) IsSingleHunkForWholeFile() bool {

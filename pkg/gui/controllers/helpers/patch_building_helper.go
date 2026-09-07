@@ -80,7 +80,11 @@ func (self *PatchBuildingHelper) RefreshPatchBuildingPanel(opts types.OnFocusOpt
 
 	showLineNumbers := self.c.UserConfig().Gui.ShowLineNumbersInStagingView
 
-	secondaryDiff := self.c.Git().Patch.PatchBuilder.RenderPatchForFile(patch.RenderPatchForFileOpts{
+	// TEMPORARY: rendering the Secondary panel with the new side-by-side
+	// split renderer, unconditionally, to prove it out on a view with no
+	// cursor/selection to break (see the "split diff view" plan). This will
+	// become an opt-in toggle in a later change.
+	secondaryDiff := self.c.Git().Patch.PatchBuilder.RenderSplitPatchForFile(patch.RenderPatchForFileOpts{
 		Filename:                               file.Path,
 		PreviousPath:                           file.PreviousPath,
 		Plain:                                  false,

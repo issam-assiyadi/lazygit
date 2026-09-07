@@ -821,6 +821,20 @@ func TestGutterWidth(t *testing.T) {
 	assert.Equal(t, 6, patch.GutterWidth(true))
 }
 
+func TestSplitGutterWidth(t *testing.T) {
+	patch := Parse(twoHunks)
+	assert.Equal(t, 0, patch.SplitGutterWidth(false, true))
+	assert.Equal(t, 0, patch.SplitGutterWidth(false, false))
+	assert.Equal(t, 3, patch.SplitGutterWidth(true, true))
+	assert.Equal(t, 3, patch.SplitGutterWidth(true, false))
+
+	// a brand new file has no old-side line numbers at all, so its
+	// old-side split gutter is 0 width even with line numbers enabled
+	newFilePatch := Parse(newFile)
+	assert.Equal(t, 0, newFilePatch.SplitGutterWidth(true, true))
+	assert.Equal(t, 2, newFilePatch.SplitGutterWidth(true, false))
+}
+
 func TestTransformPreservesFilename(t *testing.T) {
 	patch := Parse(simpleDiff).SetFilename("filename.go")
 

@@ -133,20 +133,20 @@ func emphasize(base style.TextStyle) style.TextStyle {
 
 // applyChangeEmphasis takes the spans that would otherwise render `rest`
 // (syntax-highlighting spans if available, or nil), and the style to fall
-// back to when there's none, and returns spans with emphasize layered onto
-// the portion inside changed. Returns spans unchanged if changed is nil
-// (line isn't part of a detected 1:1 modification pair) or empty (the two
-// sides turned out identical after trimming), so callers' existing
-// nil-means-"no highlighting available" fallback still applies in that
-// case.
+// back to when there's none, and returns a span list that's always safe to
+// render: if spans is nil or doesn't reconstruct rest exactly, it's
+// replaced with a single span covering all of rest in baseStyle. On top of
+// that, if changed is non-nil and non-empty (this line is part of a
+// detected 1:1 modification pair), emphasize is layered onto the portion of
+// the result inside that range.
 func applyChangeEmphasis(rest string, spans highlightedLine, baseStyle style.TextStyle, changed *byteRange) highlightedLine {
-	if changed.empty() {
-		return spans
-	}
-
 	base := spans
 	if !spansReconstruct(base, rest) {
 		base = highlightedLine{{text: rest, style: baseStyle}}
+	}
+
+	if changed.empty() {
+		return base
 	}
 
 	return splitAndEmphasize(base, changed.start, changed.end)

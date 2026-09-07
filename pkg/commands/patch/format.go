@@ -114,7 +114,7 @@ func (self *patchPresenter) format() string {
 		oldLine, newLine := hunk.oldStart, hunk.newStart
 		for bodyLineIdx, line := range hunk.bodyLines {
 			gutter := self.formatGutter(line.Kind, oldLine, newLine, oldGutterWidth, newGutterWidth)
-			lineStyle := self.patchLineStyle(line)
+			lineStyle := patchLineStyle(line)
 			var spans highlightedLine
 			if highlighting != nil {
 				spans = highlighting[bodyLineIdx]
@@ -199,7 +199,7 @@ func (self *patchPresenter) formatHunkHeaderLine(hunk *Hunk) string {
 	return formatted
 }
 
-func (self *patchPresenter) patchLineStyle(patchLine *PatchLine) style.TextStyle {
+func patchLineStyle(patchLine *PatchLine) style.TextStyle {
 	switch patchLine.Kind {
 	case ADDITION:
 		return style.FgGreen
