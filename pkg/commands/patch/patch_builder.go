@@ -208,6 +208,9 @@ type RenderPatchForFileOpts struct {
 	Plain                                  bool
 	Reverse                                bool
 	TurnAddedFilesIntoDiffAgainstEmptyFile bool
+	// Only used when Plain is false: whether to prefix each line with an
+	// old/new line-number gutter.
+	ShowLineNumbers bool
 }
 
 func (p *PatchBuilder) RenderPatchForFile(opts RenderPatchForFileOpts) string {
@@ -244,10 +247,10 @@ func (p *PatchBuilder) RenderPatchForFile(opts RenderPatchForFileOpts) string {
 	if opts.Plain {
 		return patch.FormatPlain()
 	}
-	return patch.FormatView(FormatViewOpts{})
+	return patch.FormatView(FormatViewOpts{ShowLineNumbers: opts.ShowLineNumbers})
 }
 
-func (p *PatchBuilder) renderEachFilePatch(plain bool) []string {
+func (p *PatchBuilder) renderEachFilePatch(plain bool, showLineNumbers bool) []string {
 	fileInfoMap := p.snapshotFileInfoMap()
 
 	// sort files by name then iterate through and render each patch
@@ -261,6 +264,7 @@ func (p *PatchBuilder) renderEachFilePatch(plain bool) []string {
 			Plain:                                  plain,
 			Reverse:                                false,
 			TurnAddedFilesIntoDiffAgainstEmptyFile: true,
+			ShowLineNumbers:                        showLineNumbers,
 		})
 	})
 	output := lo.Filter(patches, func(patch string, _ int) bool {
@@ -270,8 +274,10 @@ func (p *PatchBuilder) renderEachFilePatch(plain bool) []string {
 	return output
 }
 
-func (p *PatchBuilder) RenderAggregatedPatch(plain bool) string {
-	return strings.Join(p.renderEachFilePatch(plain), "")
+// RenderAggregatedPatch renders the patch across all files that have changes
+// selected. showLineNumbers is ignored when plain is true.
+func (p *PatchBuilder) RenderAggregatedPatch(plain bool, showLineNumbers bool) string {
+	return strings.Join(p.renderEachFilePatch(plain, showLineNumbers), "")
 }
 
 func (p *PatchBuilder) GetFileStatus(filename string, parent string) PatchStatus {

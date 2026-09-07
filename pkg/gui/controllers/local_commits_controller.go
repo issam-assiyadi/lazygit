@@ -724,7 +724,7 @@ func (self *LocalCommitsController) GetOnRenderToMain() func() {
 
 func secondaryPatchPanelUpdateOpts(c *ControllerCommon) *types.ViewUpdateOpts {
 	if c.Git().Patch.PatchBuilder.Active() {
-		patch := c.Git().Patch.PatchBuilder.RenderAggregatedPatch(false)
+		patch := c.Git().Patch.PatchBuilder.RenderAggregatedPatch(false, c.UserConfig().Gui.ShowLineNumbersInStagingView)
 
 		return &types.ViewUpdateOpts{
 			Task:  types.NewRenderStringWithoutScrollTask(patch),

@@ -1,6 +1,8 @@
 package patch
 
 import (
+	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/jesseduffield/generics/set"
@@ -16,6 +18,9 @@ type patchPresenter struct {
 
 	// line indices for tagged lines (e.g. lines added to a custom patch)
 	incLineIndices *set.Set[int]
+
+	// if true, prefix each body line with an old/new line-number gutter
+	showLineNumbers bool
 }
 
 // formats the patch as a plain string
@@ -41,6 +46,8 @@ func formatRangePlain(patch *Patch, startIdx int, endIdx int) string {
 type FormatViewOpts struct {
 	// line indices for tagged lines (e.g. lines added to a custom patch)
 	IncLineIndices *set.Set[int]
+	// if true, prefix each body line with an old/new line-number gutter
+	ShowLineNumbers bool
 }
 
 // formats the patch for rendering within a view, meaning it's coloured and
@@ -51,9 +58,10 @@ func formatView(patch *Patch, opts FormatViewOpts) string {
 		includedLineIndices = set.New[int]()
 	}
 	presenter := &patchPresenter{
-		patch:          patch,
-		plain:          false,
-		incLineIndices: includedLineIndices,
+		patch:           patch,
+		plain:           false,
+		incLineIndices:  includedLineIndices,
+		showLineNumbers: opts.ShowLineNumbers,
 	}
 	return presenter.format()
 }
@@ -63,6 +71,11 @@ func (self *patchPresenter) format() string {
 	// the patch is effectively empty and we can return an empty string
 	if !self.patch.ContainsChanges() {
 		return ""
+	}
+
+	oldGutterWidth, newGutterWidth := 0, 0
+	if self.showLineNumbers && !self.plain {
+		oldGutterWidth, newGutterWidth = self.patch.LineNumberColumnWidths()
 	}
 
 	stringBuilder := &strings.Builder{}
@@ -95,17 +108,61 @@ func (self *patchPresenter) format() string {
 				),
 		)
 
+		oldLine, newLine := hunk.oldStart, hunk.newStart
 		for _, line := range hunk.bodyLines {
-			style := self.patchLineStyle(line)
+			gutter := self.formatGutter(line.Kind, oldLine, newLine, oldGutterWidth, newGutterWidth)
+			lineStyle := self.patchLineStyle(line)
 			if line.IsChange() {
-				appendLine(self.formatLine(line.Content, style, lineIdx))
+				appendLine(gutter + self.formatLine(line.Content, lineStyle, lineIdx))
 			} else {
-				appendLine(self.formatLineAux(line.Content, style, false))
+				appendLine(gutter + self.formatLineAux(line.Content, lineStyle, false))
+			}
+
+			switch line.Kind {
+			case CONTEXT:
+				oldLine++
+				newLine++
+			case ADDITION:
+				newLine++
+			case DELETION:
+				oldLine++
+			case PATCH_HEADER, HUNK_HEADER, NEWLINE_MESSAGE:
+				// these don't correspond to a line in either file
 			}
 		}
 	}
 
 	return stringBuilder.String()
+}
+
+// formats the old/new line-number gutter for a single body line. oldWidth and
+// newWidth are the column widths returned by Patch.LineNumberColumnWidths;
+// formatGutter returns "" for both of them being zero, which happens when
+// line numbers aren't being shown at all.
+func (self *patchPresenter) formatGutter(kind PatchLineKind, oldLine int, newLine int, oldWidth int, newWidth int) string {
+	if oldWidth == 0 && newWidth == 0 {
+		return ""
+	}
+
+	oldStr, newStr := "", ""
+	oldStyle, newStyle := style.FgBlackLighter, style.FgBlackLighter
+
+	switch kind {
+	case ADDITION:
+		newStr = strconv.Itoa(newLine)
+		newStyle = style.FgGreen
+	case DELETION:
+		oldStr = strconv.Itoa(oldLine)
+		oldStyle = style.FgRed
+	case CONTEXT:
+		oldStr = strconv.Itoa(oldLine)
+		newStr = strconv.Itoa(newLine)
+	case NEWLINE_MESSAGE, HUNK_HEADER, PATCH_HEADER:
+		// no line numbers for these
+	}
+
+	return oldStyle.Sprint(fmt.Sprintf("%*s", oldWidth, oldStr)) + " " +
+		newStyle.Sprint(fmt.Sprintf("%*s", newWidth, newStr)) + " "
 }
 
 func (self *patchPresenter) patchLineStyle(patchLine *PatchLine) style.TextStyle {

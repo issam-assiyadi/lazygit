@@ -3,6 +3,8 @@ package patch
 import (
 	"testing"
 
+	"github.com/jesseduffield/generics/set"
+	"github.com/jesseduffield/lazygit/pkg/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -764,6 +766,109 @@ func TestAdjustLineNumber(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestLineNumberColumnWidths(t *testing.T) {
+	scenarios := []struct {
+		testName         string
+		patchStr         string
+		expectedOldWidth int
+		expectedNewWidth int
+	}{
+		{
+			testName:         "simpleDiff",
+			patchStr:         simpleDiff,
+			expectedOldWidth: 1,
+			expectedNewWidth: 1,
+		},
+		{
+			testName:         "twoHunks",
+			patchStr:         twoHunks,
+			expectedOldWidth: 2,
+			expectedNewWidth: 2,
+		},
+		{
+			// a brand new file has no old-side line numbers at all
+			testName:         "newFile",
+			patchStr:         newFile,
+			expectedOldWidth: 0,
+			expectedNewWidth: 1,
+		},
+		{
+			// a deleted file has no new-side line numbers at all
+			testName:         "deletedFile",
+			patchStr:         deletedFile,
+			expectedOldWidth: 1,
+			expectedNewWidth: 0,
+		},
+	}
+
+	for _, s := range scenarios {
+		t.Run(s.testName, func(t *testing.T) {
+			oldWidth, newWidth := Parse(s.patchStr).LineNumberColumnWidths()
+			assert.Equal(t, s.expectedOldWidth, oldWidth)
+			assert.Equal(t, s.expectedNewWidth, newWidth)
+		})
+	}
+}
+
+func TestGutterWidth(t *testing.T) {
+	patch := Parse(twoHunks)
+	assert.Equal(t, 0, patch.GutterWidth(false))
+	assert.Equal(t, 6, patch.GutterWidth(true))
+}
+
+func TestTransformPreservesFilename(t *testing.T) {
+	patch := Parse(simpleDiff).SetFilename("filename.go")
+
+	transformed := patch.Transform(TransformOpts{
+		IncludedLineIndices: ExpandRange(-100, 100),
+	})
+
+	assert.Equal(t, "filename.go", transformed.filename)
+}
+
+func TestFormatViewWithLineNumbers(t *testing.T) {
+	patch := Parse(simpleDiff)
+
+	result := utils.Decolorise(patch.FormatView(FormatViewOpts{
+		IncLineIndices:  set.New[int](),
+		ShowLineNumbers: true,
+	}))
+
+	assert.Equal(t, `diff --git a/filename b/filename
+index dcd3485..1ba5540 100644
+--- a/filename
++++ b/filename
+@@ -1,5 +1,5 @@
+1 1  apple
+2   -orange
+  2 +grape
+3 3  ...
+4 4  ...
+5 5  ...
+`, result)
+}
+
+func TestFormatViewWithoutLineNumbers(t *testing.T) {
+	patch := Parse(simpleDiff)
+
+	result := utils.Decolorise(patch.FormatView(FormatViewOpts{
+		IncLineIndices: set.New[int](),
+	}))
+
+	assert.Equal(t, `diff --git a/filename b/filename
+index dcd3485..1ba5540 100644
+--- a/filename
++++ b/filename
+@@ -1,5 +1,5 @@
+ apple
+-orange
++grape
+ ...
+ ...
+ ...
+`, result)
 }
 
 func TestIsSingleHunkForWholeFile(t *testing.T) {

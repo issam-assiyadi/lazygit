@@ -1,6 +1,8 @@
 package patch
 
 import (
+	"strconv"
+
 	"github.com/samber/lo"
 )
 
@@ -207,6 +209,47 @@ func (self *Patch) AdjustLineNumber(lineNumber int) int {
 	}
 
 	return adjustedLineNumber
+}
+
+// Returns the number of digits needed to display the largest old-file and
+// new-file line numbers that occur anywhere in the patch (0 for a side that
+// never shows a line number, e.g. the old side of a diff against an empty
+// file).
+func (self *Patch) LineNumberColumnWidths() (oldWidth, newWidth int) {
+	maxOld, maxNew := 0, 0
+	for _, hunk := range self.hunks {
+		if oldLength := hunk.oldLength(); oldLength > 0 {
+			maxOld = max(maxOld, hunk.oldStart+oldLength-1)
+		}
+		if newLength := hunk.newLength(); newLength > 0 {
+			maxNew = max(maxNew, hunk.newStart+newLength-1)
+		}
+	}
+	if maxOld > 0 {
+		oldWidth = len(strconv.Itoa(maxOld))
+	}
+	if maxNew > 0 {
+		newWidth = len(strconv.Itoa(maxNew))
+	}
+	return oldWidth, newWidth
+}
+
+// Returns the total width of the line-number gutter rendered by FormatView
+// when ShowLineNumbers is set, or 0 if line numbers aren't shown (either
+// because showLineNumbers is false, or because the patch has no hunks to
+// derive column widths from).
+func (self *Patch) GutterWidth(showLineNumbers bool) int {
+	if !showLineNumbers {
+		return 0
+	}
+
+	oldWidth, newWidth := self.LineNumberColumnWidths()
+	if oldWidth == 0 && newWidth == 0 {
+		return 0
+	}
+
+	// one column per side, plus a trailing space after each
+	return oldWidth + 1 + newWidth + 1
 }
 
 func (self *Patch) IsSingleHunkForWholeFile() bool {

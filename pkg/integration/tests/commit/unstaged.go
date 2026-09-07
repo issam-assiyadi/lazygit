@@ -33,13 +33,13 @@ var Unstaged = NewIntegrationTest(NewIntegrationTestArgs{
 			IsFocused().
 			Tap(func() {
 				t.Views().StagingSecondary().Content(DoesNotContain("+myfile content"))
-				t.Views().Staging().SelectedLine(Equals("+myfile content"))
+				t.Views().Staging().SelectedLine(Equals(" 1 +myfile content"))
 			}).
 			// stage the first line
 			PressPrimaryAction().
 			Tap(func() {
 				t.Views().Staging().Content(DoesNotContain("+myfile content")).
-					SelectedLine(Equals("+with a second line"))
+					SelectedLine(Equals("  2 +with a second line"))
 				t.Views().StagingSecondary().Content(Contains("+myfile content"))
 			}).
 			Press(keys.Files.CommitChanges)

@@ -24,6 +24,13 @@ type State struct {
 	patch         *patch.Patch
 	selectMode    selectMode
 
+	// whether body lines are prefixed with an old/new line-number gutter;
+	// kept around so we can recompute the wrap width when the view is resized
+	showLineNumbers bool
+	// the width, in characters, of the line-number gutter (0 if
+	// showLineNumbers is false, or if the patch has no hunks)
+	gutterWidth int
+
 	// Array of indices of the wrapped lines indexed by a patch line index
 	viewLineIndices []int
 	// Array of indices of the original patch lines indexed by a wrapped view line index
@@ -45,7 +52,7 @@ const (
 	HUNK
 )
 
-func NewState(diff string, filename string, selectedLineIdx int, view *gocui.View, oldState *State, useHunkModeByDefault bool) *State {
+func NewState(diff string, filename string, showLineNumbers bool, selectedLineIdx int, view *gocui.View, oldState *State, useHunkModeByDefault bool) *State {
 	if oldState != nil && diff == oldState.diff && selectedLineIdx == -1 {
 		// if we're here then we can return the old state. If selectedLineIdx was not -1
 		// then that would mean we were trying to click and potentially drag a range, which
@@ -59,7 +66,8 @@ func NewState(diff string, filename string, selectedLineIdx int, view *gocui.Vie
 		return nil
 	}
 
-	viewLineIndices, patchLineIndices := wrapPatchLines(diff, view)
+	gutterWidth := patch.GutterWidth(showLineNumbers)
+	viewLineIndices, patchLineIndices := wrapPatchLines(diff, gutterWidth, view)
 
 	rangeStartLineIdx := 0
 	if oldState != nil {
@@ -118,6 +126,8 @@ func NewState(diff string, filename string, selectedLineIdx int, view *gocui.Vie
 		rangeStartLineIdx:   rangeStartLineIdx,
 		rangeIsSticky:       false,
 		diff:                diff,
+		showLineNumbers:     showLineNumbers,
+		gutterWidth:         gutterWidth,
 		viewLineIndices:     viewLineIndices,
 		patchLineIndices:    patchLineIndices,
 		userEnabledHunkMode: userEnabledHunkMode,
@@ -134,7 +144,7 @@ func (s *State) OnViewWidthChanged(view *gocui.View) {
 	if s.selectMode == RANGE {
 		rangeStartPatchLineIdx = s.patchLineIndices[s.rangeStartLineIdx]
 	}
-	s.viewLineIndices, s.patchLineIndices = wrapPatchLines(s.diff, view)
+	s.viewLineIndices, s.patchLineIndices = wrapPatchLines(s.diff, s.gutterWidth, view)
 	s.selectedLineIdx = s.viewLineIndices[selectedPatchLineIdx]
 	if s.selectMode == RANGE {
 		s.rangeStartLineIdx = s.viewLineIndices[rangeStartPatchLineIdx]
@@ -398,7 +408,8 @@ func (s *State) AdjustSelectedLineIdx(change int) {
 func (s *State) RenderForLineIndices(includedLineIndices []int) string {
 	includedLineIndicesSet := set.NewFromSlice(includedLineIndices)
 	return s.patch.FormatView(patch.FormatViewOpts{
-		IncLineIndices: includedLineIndicesSet,
+		IncLineIndices:  includedLineIndicesSet,
+		ShowLineNumbers: s.showLineNumbers,
 	})
 }
 
@@ -423,9 +434,15 @@ func (s *State) CalculateOrigin(currentOrigin int, bufferHeight int, numLines in
 	return calculateOrigin(currentOrigin, bufferHeight, numLines, firstLineIdx, lastLineIdx, s.GetSelectedViewLineIdx(), s.selectMode)
 }
 
-func wrapPatchLines(diff string, view *gocui.View) ([]int, []int) {
+func wrapPatchLines(diff string, gutterWidth int, view *gocui.View) ([]int, []int) {
+	// The line-number gutter isn't part of `diff` (it's added later by
+	// Patch.FormatView), but it still takes up screen space, so the width we
+	// wrap against here needs to account for it too, or this wrapping
+	// computation and the view's own wrapping of the final rendered string
+	// would disagree about where lines break.
+	width := max(1, view.InnerWidth()-gutterWidth)
 	_, viewLineIndices, patchLineIndices := utils.WrapViewLinesToWidth(
-		view.Wrap, view.Editable, strings.TrimSuffix(diff, "\n"), view.InnerWidth(), view.TabWidth)
+		view.Wrap, view.Editable, strings.TrimSuffix(diff, "\n"), width, view.TabWidth)
 	return viewLineIndices, patchLineIndices
 }
 

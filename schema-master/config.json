@@ -693,6 +693,11 @@
           "description": "If true, hunk selection mode will be enabled by default when entering the staging view.",
           "default": true
         },
+        "showLineNumbersInStagingView": {
+          "type": "boolean",
+          "description": "If true, show old/new line numbers alongside each line in the staging and patch-building views.",
+          "default": true
+        },
         "language": {
           "type": "string",
           "enum": [

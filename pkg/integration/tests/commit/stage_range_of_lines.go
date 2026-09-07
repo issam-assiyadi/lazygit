@@ -24,9 +24,9 @@ var StageRangeOfLines = NewIntegrationTest(NewIntegrationTestArgs{
 
 		t.Views().Staging().
 			Content(
-				Contains("-1st\n-2nd\n+1st changed\n+2nd changed\n 3rd\n 4th\n-5th\n+5th changed\n 6th"),
+				Contains("1   -1st\n2   -2nd\n  1 +1st changed\n  2 +2nd changed\n3 3  3rd\n4 4  4th\n5   -5th\n  5 +5th changed\n6 6  6th"),
 			).
-			SelectedLine(Equals("-1st")).
+			SelectedLine(Equals("1   -1st")).
 			Press(keys.Universal.ToggleRangeSelect).
 			SelectNextItem().
 			SelectNextItem().
@@ -34,8 +34,8 @@ var StageRangeOfLines = NewIntegrationTest(NewIntegrationTestArgs{
 			SelectNextItem().
 			PressPrimaryAction().
 			Content(
-				Contains(" 3rd\n 4th\n-5th\n+5th changed\n 6th"),
+				Contains("3 3  3rd\n4 4  4th\n5   -5th\n  5 +5th changed\n6 6  6th"),
 			).
-			SelectedLine(Equals("-5th"))
+			SelectedLine(Equals("5   -5th"))
 	},
 })

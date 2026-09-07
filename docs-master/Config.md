@@ -157,6 +157,10 @@ gui:
   # staging view.
   useHunkModeInStagingView: true
 
+  # If true, show old/new line numbers alongside each line in the staging and
+  # patch-building views.
+  showLineNumbersInStagingView: true
+
   # One of 'auto' (default) | 'en' | 'zh-CN' | 'zh-TW' | 'pl' | 'nl' | 'ja' | 'ko'
   # | 'ru' | 'pt'
   language: auto

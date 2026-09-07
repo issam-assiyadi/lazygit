@@ -276,7 +276,7 @@ func (self *CustomPatchOptionsMenuAction) handleApplyPatch(reverse bool) error {
 }
 
 func (self *CustomPatchOptionsMenuAction) copyPatchToClipboard() error {
-	patch := self.c.Git().Patch.PatchBuilder.RenderAggregatedPatch(true)
+	patch := self.c.Git().Patch.PatchBuilder.RenderAggregatedPatch(true, false)
 
 	self.c.LogAction(self.c.Tr.Actions.CopyPatchToClipboard)
 	if err := self.c.OS().CopyToClipboard(patch); err != nil {

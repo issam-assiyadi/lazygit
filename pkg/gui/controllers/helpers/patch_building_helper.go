@@ -78,19 +78,22 @@ func (self *PatchBuildingHelper) RefreshPatchBuildingPanel(opts types.OnFocusOpt
 		return
 	}
 
+	showLineNumbers := self.c.UserConfig().Gui.ShowLineNumbersInStagingView
+
 	secondaryDiff := self.c.Git().Patch.PatchBuilder.RenderPatchForFile(patch.RenderPatchForFileOpts{
 		Filename:                               file.Path,
 		PreviousPath:                           file.PreviousPath,
 		Plain:                                  false,
 		Reverse:                                false,
 		TurnAddedFilesIntoDiffAgainstEmptyFile: true,
+		ShowLineNumbers:                        showLineNumbers,
 	})
 
 	context := self.c.Contexts().CustomPatchBuilder
 
 	oldState := context.GetState()
 
-	state := patch_exploring.NewState(diff, file.Path, selectedLineIdx, context.GetView(), oldState, self.c.UserConfig().Gui.UseHunkModeInStagingView)
+	state := patch_exploring.NewState(diff, file.Path, showLineNumbers, selectedLineIdx, context.GetView(), oldState, self.c.UserConfig().Gui.UseHunkModeInStagingView)
 	context.SetState(state)
 	if state == nil {
 		self.Escape()
