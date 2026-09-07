@@ -1,6 +1,7 @@
 package patch
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/jesseduffield/generics/set"
@@ -877,6 +878,32 @@ func TestFormatHunkHeaderLine(t *testing.T) {
 	patch := Parse(exampleHunk)
 
 	result := patch.FormatView(FormatViewOpts{IncLineIndices: set.New[int]()})
+
+	numbersStyle := style.FgCyan.SetBold().MergeStyle(style.BgBlackLighter)
+	contextStyle := theme.DefaultTextColor.MergeStyle(style.BgBlackLighter)
+	expectedHeaderLine := numbersStyle.Sprint("@@ -1,5 +1,5 @@") + contextStyle.Sprint("")
+
+	assert.Contains(t, result, expectedHeaderLine+"\n")
+}
+
+func TestFormatHunkHeaderLinePaddedToWidth(t *testing.T) {
+	patch := Parse(exampleHunk)
+
+	result := patch.FormatView(FormatViewOpts{IncLineIndices: set.New[int](), Width: 30})
+
+	numbersStyle := style.FgCyan.SetBold().MergeStyle(style.BgBlackLighter)
+	contextStyle := theme.DefaultTextColor.MergeStyle(style.BgBlackLighter)
+	// "@@ -1,5 +1,5 @@" is 15 characters, so it needs 15 more to reach width 30
+	expectedHeaderLine := numbersStyle.Sprint("@@ -1,5 +1,5 @@") +
+		contextStyle.Sprint("") + contextStyle.Sprint(strings.Repeat(" ", 15))
+
+	assert.Contains(t, result, expectedHeaderLine+"\n")
+}
+
+func TestFormatHunkHeaderLineNotPaddedWhenAlreadyWiderThanWidth(t *testing.T) {
+	patch := Parse(exampleHunk)
+
+	result := patch.FormatView(FormatViewOpts{IncLineIndices: set.New[int](), Width: 5})
 
 	numbersStyle := style.FgCyan.SetBold().MergeStyle(style.BgBlackLighter)
 	contextStyle := theme.DefaultTextColor.MergeStyle(style.BgBlackLighter)

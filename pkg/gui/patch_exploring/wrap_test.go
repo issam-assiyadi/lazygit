@@ -16,6 +16,9 @@ import (
 // disagree with how the view actually wraps the rendered content: the
 // bookkeeping shrank the wrap width by the gutter width for every row,
 // while only the first row of a wrapped line actually loses that width.
+// Also exercises the padded-to-width hunk header (the header's background
+// band is padded out to the view width but must still be treated as a
+// single, unwrapped row).
 func TestWrapPatchLinesMatchesActualRendering(t *testing.T) {
 	longLine := strings.Repeat("x", 70)
 	diffText := "diff --git a/f b/f\n--- a/f\n+++ b/f\n@@ -1,2 +1,2 @@\n-short old line\n+" +
@@ -32,7 +35,7 @@ func TestWrapPatchLinesMatchesActualRendering(t *testing.T) {
 
 	_, bookkeepingPatchLineIndices := wrapPatchLines(p, gutterWidth, view)
 
-	rendered := utils.Decolorise(p.FormatView(patch.FormatViewOpts{ShowLineNumbers: true}))
+	rendered := utils.Decolorise(p.FormatView(patch.FormatViewOpts{ShowLineNumbers: true, Width: view.InnerWidth()}))
 	_, _, actualPatchLineIndices := utils.WrapViewLinesToWidth(
 		true, view.Editable, strings.TrimSuffix(rendered, "\n"), view.InnerWidth(), view.TabWidth)
 

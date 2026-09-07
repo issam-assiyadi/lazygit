@@ -211,6 +211,10 @@ type RenderPatchForFileOpts struct {
 	// Only used when Plain is false: whether to prefix each line with an
 	// old/new line-number gutter.
 	ShowLineNumbers bool
+	// Only used when Plain is false: the width of the view the patch is
+	// being rendered into, used to pad hunk header lines' background so it
+	// spans the whole view.
+	Width int
 }
 
 func (p *PatchBuilder) RenderPatchForFile(opts RenderPatchForFileOpts) string {
@@ -247,10 +251,10 @@ func (p *PatchBuilder) RenderPatchForFile(opts RenderPatchForFileOpts) string {
 	if opts.Plain {
 		return patch.FormatPlain()
 	}
-	return patch.FormatView(FormatViewOpts{ShowLineNumbers: opts.ShowLineNumbers})
+	return patch.FormatView(FormatViewOpts{ShowLineNumbers: opts.ShowLineNumbers, Width: opts.Width})
 }
 
-func (p *PatchBuilder) renderEachFilePatch(plain bool, showLineNumbers bool) []string {
+func (p *PatchBuilder) renderEachFilePatch(plain bool, showLineNumbers bool, width int) []string {
 	fileInfoMap := p.snapshotFileInfoMap()
 
 	// sort files by name then iterate through and render each patch
@@ -265,6 +269,7 @@ func (p *PatchBuilder) renderEachFilePatch(plain bool, showLineNumbers bool) []s
 			Reverse:                                false,
 			TurnAddedFilesIntoDiffAgainstEmptyFile: true,
 			ShowLineNumbers:                        showLineNumbers,
+			Width:                                  width,
 		})
 	})
 	output := lo.Filter(patches, func(patch string, _ int) bool {
@@ -275,9 +280,9 @@ func (p *PatchBuilder) renderEachFilePatch(plain bool, showLineNumbers bool) []s
 }
 
 // RenderAggregatedPatch renders the patch across all files that have changes
-// selected. showLineNumbers is ignored when plain is true.
-func (p *PatchBuilder) RenderAggregatedPatch(plain bool, showLineNumbers bool) string {
-	return strings.Join(p.renderEachFilePatch(plain, showLineNumbers), "")
+// selected. showLineNumbers and width are ignored when plain is true.
+func (p *PatchBuilder) RenderAggregatedPatch(plain bool, showLineNumbers bool, width int) string {
+	return strings.Join(p.renderEachFilePatch(plain, showLineNumbers, width), "")
 }
 
 func (p *PatchBuilder) GetFileStatus(filename string, parent string) PatchStatus {

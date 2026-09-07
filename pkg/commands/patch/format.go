@@ -21,6 +21,11 @@ type patchPresenter struct {
 
 	// if true, prefix each body line with an old/new line-number gutter
 	showLineNumbers bool
+
+	// the width to pad hunk header lines' background out to, so the band
+	// spans the whole view rather than just the header text. 0 means don't
+	// pad (used e.g. by tests that don't care about a real view's width).
+	width int
 }
 
 // formats the patch as a plain string
@@ -48,6 +53,10 @@ type FormatViewOpts struct {
 	IncLineIndices *set.Set[int]
 	// if true, prefix each body line with an old/new line-number gutter
 	ShowLineNumbers bool
+	// the width of the view the patch is being rendered into, used to pad
+	// hunk header lines' background so it spans the whole view. 0 (the
+	// zero value) means don't pad.
+	Width int
 }
 
 // formats the patch for rendering within a view, meaning it's coloured and
@@ -62,6 +71,7 @@ func formatView(patch *Patch, opts FormatViewOpts) string {
 		plain:           false,
 		incLineIndices:  includedLineIndices,
 		showLineNumbers: opts.ShowLineNumbers,
+		width:           opts.Width,
 	}
 	return presenter.format()
 }
@@ -161,8 +171,9 @@ func (self *patchPresenter) formatGutter(kind PatchLineKind, oldLine int, newLin
 }
 
 // formats a hunk's "@@ -a,b +c,d @@ context" header line. The whole line
-// gets a subtle background so it reads as a section divider between hunks,
-// rather than just another colored line among the body lines.
+// (padded out to self.width, if set) gets a subtle background so it reads
+// as a section divider spanning the view, rather than just another colored
+// line among the body lines.
 func (self *patchPresenter) formatHunkHeaderLine(hunk *Hunk) string {
 	if self.plain {
 		return hunk.formatHeaderLine()
@@ -171,7 +182,14 @@ func (self *patchPresenter) formatHunkHeaderLine(hunk *Hunk) string {
 	numbersStyle := style.FgCyan.SetBold().MergeStyle(style.BgBlackLighter)
 	contextStyle := theme.DefaultTextColor.MergeStyle(style.BgBlackLighter)
 
-	return numbersStyle.Sprint(hunk.formatHeaderStart()) + contextStyle.Sprint(hunk.headerContext)
+	headerLine := hunk.formatHeaderLine()
+	formatted := numbersStyle.Sprint(hunk.formatHeaderStart()) + contextStyle.Sprint(hunk.headerContext)
+
+	if padding := self.width - len(headerLine); padding > 0 {
+		formatted += contextStyle.Sprint(strings.Repeat(" ", padding))
+	}
+
+	return formatted
 }
 
 func (self *patchPresenter) patchLineStyle(patchLine *PatchLine) style.TextStyle {

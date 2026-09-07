@@ -87,6 +87,7 @@ func (self *PatchBuildingHelper) RefreshPatchBuildingPanel(opts types.OnFocusOpt
 		Reverse:                                false,
 		TurnAddedFilesIntoDiffAgainstEmptyFile: true,
 		ShowLineNumbers:                        showLineNumbers,
+		Width:                                  self.c.Views().PatchBuildingSecondary.InnerWidth(),
 	})
 
 	context := self.c.Contexts().CustomPatchBuilder

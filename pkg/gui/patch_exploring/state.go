@@ -30,6 +30,9 @@ type State struct {
 	// the width, in characters, of the line-number gutter (0 if
 	// showLineNumbers is false, or if the patch has no hunks)
 	gutterWidth int
+	// the view's current width, used to pad hunk header lines' background
+	// out to the full width of the view
+	viewWidth int
 
 	// Array of indices of the wrapped lines indexed by a patch line index
 	viewLineIndices []int
@@ -128,6 +131,7 @@ func NewState(diff string, filename string, showLineNumbers bool, selectedLineId
 		diff:                diff,
 		showLineNumbers:     showLineNumbers,
 		gutterWidth:         gutterWidth,
+		viewWidth:           view.InnerWidth(),
 		viewLineIndices:     viewLineIndices,
 		patchLineIndices:    patchLineIndices,
 		userEnabledHunkMode: userEnabledHunkMode,
@@ -135,6 +139,8 @@ func NewState(diff string, filename string, showLineNumbers bool, selectedLineId
 }
 
 func (s *State) OnViewWidthChanged(view *gocui.View) {
+	s.viewWidth = view.InnerWidth()
+
 	if !view.Wrap {
 		return
 	}
@@ -410,6 +416,7 @@ func (s *State) RenderForLineIndices(includedLineIndices []int) string {
 	return s.patch.FormatView(patch.FormatViewOpts{
 		IncLineIndices:  includedLineIndicesSet,
 		ShowLineNumbers: s.showLineNumbers,
+		Width:           s.viewWidth,
 	})
 }
 
