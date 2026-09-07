@@ -6,7 +6,7 @@ import (
 )
 
 var SideBySideDiffPreview = NewIntegrationTest(NewIntegrationTestArgs{
-	Description:  "The Files panel's passive diff preview renders side-by-side when Gui.SideBySideDiffs is on, for a single selected file, but falls back to the unified renderer for a selected directory",
+	Description:  "The Files panel's passive diff preview renders side-by-side (with per-column line numbers) when Gui.SideBySideDiffs is on, for a single selected file, but falls back to the unified renderer for a selected directory",
 	ExtraCmdArgs: []string{},
 	Skip:         false,
 	SetupConfig: func(config *config.AppConfig) {
@@ -33,7 +33,10 @@ var SideBySideDiffPreview = NewIntegrationTest(NewIntegrationTestArgs{
 		t.Views().Main().
 			Content(Contains("│")).
 			Content(DoesNotContain("+TWO")).
-			Content(Contains("TWO"))
+			Content(Contains("TWO")).
+			// each column gets its own line-number gutter
+			Content(Contains("1 one")).
+			Content(Contains("3 three"))
 
 		// selecting the parent directory diffs multiple files at once,
 		// which isn't representable as a single patch.Patch - this must

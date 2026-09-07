@@ -410,7 +410,7 @@ func (self *FilesController) diffTask(node *filetree.FileNode, cached bool, path
 	if self.c.UserConfig().Gui.SideBySideDiffs && node.GetIsFile() {
 		diff := self.c.Git().WorkingTree.WorktreeFileDiff(node.File, true, cached)
 		p := patch.Parse(diff).SetFilename(node.GetPath())
-		rendered, _ := p.FormatSplitView(patch.FormatSplitViewOpts{Width: view.InnerWidth()})
+		rendered, _ := p.FormatSplitView(patch.FormatSplitViewOpts{ShowLineNumbers: true, Width: view.InnerWidth()})
 		return types.NewRenderStringWithoutScrollTask(rendered)
 	}
 
