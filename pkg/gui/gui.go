@@ -359,6 +359,7 @@ func (gui *Gui) onNewRepo(startArgs appTypes.StartArgs, contextKey types.Context
 	if err != nil {
 		return err
 	}
+	applySideBySideDiffsOverride(startArgs, gui.Config)
 
 	err = gui.onUserConfigLoaded()
 	if err != nil {
@@ -378,6 +379,7 @@ func (gui *Gui) onNewRepo(startArgs appTypes.StartArgs, contextKey types.Context
 			reloadErr, didChange := gui.Config.ReloadChangedUserConfigFiles()
 			if didChange && reloadErr == nil {
 				gui.c.Log.Info("User config changed - reloading")
+				applySideBySideDiffsOverride(startArgs, gui.Config)
 				reloadErr = gui.onUserConfigLoaded()
 				gui.reloadSidePanels()
 				gui.resetKeybindings()
@@ -717,6 +719,17 @@ func (gui *Gui) initialWindowViewNameMap(contextTree *context.ContextTree) *util
 	}
 
 	return result
+}
+
+// applySideBySideDiffsOverride re-applies the --side-by-side CLI flag on top
+// of whatever UserConfig.Gui.SideBySideDiffs was just (re)loaded from disk.
+// Must be called after every ReloadUserConfigForRepo/ReloadChangedUserConfigFiles,
+// since those replace the UserConfig object wholesale and would otherwise
+// silently drop this in-memory-only override.
+func applySideBySideDiffsOverride(startArgs appTypes.StartArgs, config config.AppConfigurer) {
+	if startArgs.SideBySideDiffs {
+		config.GetUserConfig().Gui.SideBySideDiffs = true
+	}
 }
 
 func initialScreenMode(startArgs appTypes.StartArgs, config config.AppConfigurer) types.ScreenMode {

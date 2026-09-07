@@ -251,6 +251,7 @@ var tests = []*components.IntegrationTest{
 	file.RenamedFiles,
 	file.RenamedFilesNoRootItem,
 	file.SideBySideDiffPreview,
+	file.SideBySideDiffsCliFlag,
 	file.StageAllWithoutChangedFiles,
 	file.StageChildrenRangeSelect,
 	file.StageDeletedRangeSelect,

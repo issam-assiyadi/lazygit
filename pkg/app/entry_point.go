@@ -142,10 +142,6 @@ func Start(buildInfo *BuildInfo, integrationTest integrationTypes.IntegrationTes
 		log.Fatal(err.Error())
 	}
 
-	if cliArgs.SideBySideDiffs {
-		appConfig.GetUserConfig().Gui.SideBySideDiffs = true
-	}
-
 	if integrationTest != nil {
 		integrationTest.SetupConfig(appConfig)
 		// Set this to true so that integration tests don't have to explicitly deal with the hunk
@@ -179,7 +175,7 @@ func Start(buildInfo *BuildInfo, integrationTest integrationTypes.IntegrationTes
 
 	parsedGitArg := parseGitArg(cliArgs.GitArg)
 
-	Run(appConfig, common, appTypes.NewStartArgs(cliArgs.FilterPath, parsedGitArg, cliArgs.ScreenMode, integrationTest))
+	Run(appConfig, common, appTypes.NewStartArgs(cliArgs.FilterPath, parsedGitArg, cliArgs.ScreenMode, cliArgs.SideBySideDiffs, integrationTest))
 }
 
 func parseCliArgsAndEnvVars() *cliArgs {
