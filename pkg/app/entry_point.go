@@ -41,6 +41,7 @@ type cliArgs struct {
 	Profile            bool
 	PrintDefaultConfig bool
 	PrintConfigDir     bool
+	SideBySideDiffs    bool
 }
 
 type BuildInfo struct {
@@ -141,6 +142,10 @@ func Start(buildInfo *BuildInfo, integrationTest integrationTypes.IntegrationTes
 		log.Fatal(err.Error())
 	}
 
+	if cliArgs.SideBySideDiffs {
+		appConfig.GetUserConfig().Gui.SideBySideDiffs = true
+	}
+
 	if integrationTest != nil {
 		integrationTest.SetupConfig(appConfig)
 		// Set this to true so that integration tests don't have to explicitly deal with the hunk
@@ -222,6 +227,9 @@ func parseCliArgsAndEnvVars() *cliArgs {
 	screenMode := ""
 	flaggy.String(&screenMode, "sm", "screen-mode", "The initial screen-mode, which determines the size of the focused panel. Valid options: 'normal' (default), 'half', 'full'")
 
+	sideBySideDiffs := false
+	flaggy.Bool(&sideBySideDiffs, "", "side-by-side", "Show the Files panel's diff preview in side-by-side mode (equivalent to setting 'gui.sideBySideDiffs: true' in the config file)")
+
 	flaggy.Parse()
 
 	if os.Getenv("DEBUG") == "TRUE" {
@@ -243,6 +251,7 @@ func parseCliArgsAndEnvVars() *cliArgs {
 		GitDir:             gitDir,
 		CustomConfigFile:   customConfigFile,
 		ScreenMode:         screenMode,
+		SideBySideDiffs:    sideBySideDiffs,
 	}
 }
 
