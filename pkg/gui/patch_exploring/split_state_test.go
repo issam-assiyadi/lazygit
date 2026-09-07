@@ -120,6 +120,13 @@ func TestSplitStateCycleRangeStopsAtColumnBoundary(t *testing.T) {
 	assert.Equal(t, 5, state.selectedLineIdx, "range must not extend onto a row blank for the locked column")
 }
 
+// HUNK selection spans a whole block of changes regardless of which column
+// the cursor is on: for an asymmetric block (old1/old2/old3 vs new1) that
+// means both the excess deletions AND the paired addition, since together
+// they're one logical change - selecting only the deletions (as an earlier,
+// column-locked implementation did) would let "stage this hunk" silently
+// stage only half of a modified line. This holds regardless of which column
+// the cursor started on.
 func TestSplitStateSelectedPatchRangeForAsymmetricBlockOldLocked(t *testing.T) {
 	state := newSplitTestState(t)
 	state.SelectLine(5)
@@ -127,9 +134,9 @@ func TestSplitStateSelectedPatchRangeForAsymmetricBlockOldLocked(t *testing.T) {
 
 	firstIdx, lastIdx := state.SelectedPatchRange()
 
-	// old column: old1, old2, old3 -> patch indices 5, 6, 7
+	// old1, old2, old3, new1 -> patch indices 5, 6, 7, 8
 	assert.Equal(t, 5, firstIdx)
-	assert.Equal(t, 7, lastIdx)
+	assert.Equal(t, 8, lastIdx)
 }
 
 func TestSplitStateSelectedPatchRangeForAsymmetricBlockNewLocked(t *testing.T) {
@@ -140,9 +147,8 @@ func TestSplitStateSelectedPatchRangeForAsymmetricBlockNewLocked(t *testing.T) {
 
 	firstIdx, lastIdx := state.SelectedPatchRange()
 
-	// new column: only new1 -> patch index 8 on both ends, since it's the
-	// only line on this side within the block
-	assert.Equal(t, 8, firstIdx)
+	// starting column doesn't matter for HUNK mode - same whole-block range
+	assert.Equal(t, 5, firstIdx)
 	assert.Equal(t, 8, lastIdx)
 }
 
@@ -151,8 +157,13 @@ func TestSplitStateLineIndicesOfAddedOrDeletedLinesInSelectedPatchRange(t *testi
 	state.SelectLine(5)
 	state.ToggleSelectHunk()
 
-	assert.Equal(t, []int{5, 6, 7}, state.LineIndicesOfAddedOrDeletedLinesInSelectedPatchRange())
+	// HUNK mode: both columns of the whole block, regardless of the
+	// starting column (order follows the row walk: each row's old side then
+	// its new side)
+	assert.Equal(t, []int{5, 8, 6, 7}, state.LineIndicesOfAddedOrDeletedLinesInSelectedPatchRange())
 
+	// switching column exits HUNK mode (back to LINE), so this now reflects
+	// just the current row's new-column line
 	state.SelectNewColumn()
 	assert.Equal(t, []int{8}, state.LineIndicesOfAddedOrDeletedLinesInSelectedPatchRange())
 }

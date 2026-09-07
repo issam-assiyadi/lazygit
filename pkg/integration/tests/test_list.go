@@ -428,6 +428,7 @@ var tests = []*components.IntegrationTest{
 	staging.StageHunks,
 	staging.StageHunksWithRapidKeypresses,
 	staging.StageLines,
+	staging.StageModifiedHunkInSplitView,
 	staging.StagePartialBlockOfChangesFirstLines,
 	staging.StagePartialBlockOfChangesLastLines,
 	staging.StagePartialBlockOfChangesMiddleLines,

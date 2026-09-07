@@ -665,10 +665,17 @@ func (s *State) SelectedViewRange() (int, int) {
 }
 
 // SelectedPatchRange returns the first and last patch-line index of the
-// current selection. In split mode this is resolved through the currently
-// selected column (range/hunk selection is column-locked - see
-// nearestPatchLineIdxInColumn for why the endpoints are searched inward
-// rather than read directly).
+// current selection. In split mode, a manual RANGE selection is resolved
+// through the currently selected column only (see nearestPatchLineIdxInColumn
+// for why the endpoints are searched inward rather than read directly) -
+// that's a deliberate scope limit for an arbitrary user-driven range (see
+// the "split diff view" plan). HUNK selection is different: it always spans
+// one whole, single contiguous block of changes (see
+// selectionRangeForCurrentBlockOfChanges), and for a modified line that
+// block's deletion and addition are two halves of the same logical change -
+// column-locking here would let "stage this hunk" silently stage only one
+// half, so it spans both columns instead (see patchIndexRangeAcrossBothColumns
+// for why a plain min/max is safe specifically for a single block).
 func (s *State) SelectedPatchRange() (int, int) {
 	viewStart, viewEnd := s.SelectedViewRange()
 
@@ -676,9 +683,42 @@ func (s *State) SelectedPatchRange() (int, int) {
 		return s.patchLineIndices[viewStart], s.patchLineIndices[viewEnd]
 	}
 
+	if s.selectMode == HUNK {
+		return s.patchIndexRangeAcrossBothColumns(viewStart, viewEnd)
+	}
+
 	start := s.nearestPatchLineIdxInColumn(viewStart, viewEnd, s.selectedColumn)
 	end := s.nearestPatchLineIdxInColumn(viewEnd, viewStart, s.selectedColumn)
 	return start, end
+}
+
+// patchIndexRangeAcrossBothColumns returns the min and max patch-line index
+// found on either column across display rows [viewStart, viewEnd]. Only
+// safe to use for a single contiguous block of changes (as HUNK selection
+// guarantees): git's diff format always lists a block's deletions at a
+// lower, contiguous range of patch indices than its additions, so within
+// one block the plain min/max recovers exactly that block's lines, with
+// nothing from outside it falling in between. That guarantee does not hold
+// across multiple blocks (e.g. a manual RANGE spanning several), which is
+// why this isn't used there.
+func (s *State) patchIndexRangeAcrossBothColumns(viewStart int, viewEnd int) (int, int) {
+	first := -1
+	last := -1
+	for row := viewStart; row <= viewEnd; row++ {
+		splitRow := s.splitRows[row]
+		for _, idx := range [2]int{splitRow.Old, splitRow.New} {
+			if idx < 0 {
+				continue
+			}
+			if first == -1 || idx < first {
+				first = idx
+			}
+			if idx > last {
+				last = idx
+			}
+		}
+	}
+	return first, last
 }
 
 // Returns the line indices of the selected patch range that are changes (i.e. additions or deletions)
@@ -686,16 +726,26 @@ func (s *State) LineIndicesOfAddedOrDeletedLinesInSelectedPatchRange() []int {
 	viewStart, viewEnd := s.SelectedViewRange()
 	lines := s.patch.Lines()
 
+	// See SelectedPatchRange: HUNK selection must not be column-locked, or
+	// toggling a whole block that includes a modified line would only
+	// affect one half of it.
+	columns := []splitColumn{s.selectedColumn}
+	if s.splitMode && s.selectMode == HUNK {
+		columns = []splitColumn{oldColumn, newColumn}
+	}
+
 	indices := []int{}
 	seen := map[int]bool{}
 	for row := viewStart; row <= viewEnd; row++ {
-		idx := s.strictPatchLineIdxAtRow(row, s.selectedColumn)
-		if idx < 0 || seen[idx] {
-			continue
-		}
-		seen[idx] = true
-		if lines[idx].IsChange() {
-			indices = append(indices, idx)
+		for _, column := range columns {
+			idx := s.strictPatchLineIdxAtRow(row, column)
+			if idx < 0 || seen[idx] {
+				continue
+			}
+			seen[idx] = true
+			if lines[idx].IsChange() {
+				indices = append(indices, idx)
+			}
 		}
 	}
 	return indices
