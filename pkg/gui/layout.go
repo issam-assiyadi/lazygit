@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/jesseduffield/lazygit/pkg/gocui"
+	"github.com/jesseduffield/lazygit/pkg/gui/context"
 	"github.com/jesseduffield/lazygit/pkg/gui/types"
 	"github.com/jesseduffield/lazygit/pkg/utils"
 	"github.com/samber/lo"
@@ -215,7 +216,7 @@ func (gui *Gui) layout(g *gocui.Gui) error {
 		// wrapped string, unlike the pty-based unified diff, which reflows
 		// on resize for free since git re-runs at the new pty width. Ask
 		// the Files panel to re-render so its wrap catches up too.
-		if gui.UserConfig().Gui.SideBySideDiffs && gui.c.Context().CurrentSide() == gui.State.Contexts.Files {
+		if gui.UserConfig().Gui.SideBySideDiffs && gui.c.Context().CurrentSide().GetKey() == context.FILES_CONTEXT_KEY {
 			gui.State.Contexts.Files.HandleRenderToMain()
 		}
 	}
