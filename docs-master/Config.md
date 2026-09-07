@@ -161,11 +161,12 @@ gui:
   # patch-building views.
   showLineNumbersInStagingView: true
 
-  # If true, render the staging and patch-building views as two side-by-side
-  # columns (old content on the left, new content on the right) instead of a
-  # single unified column. Can be toggled at runtime with 'toggleSplitDiffView'
-  # (default 's').
-  useSplitDiffInStagingView: false
+  # If true, render a file's diff preview (in the Files panel) as two side-by-side
+  # columns - old content on the left, new content on the right - instead of a
+  # single unified column. Only applies to the passive preview of a single
+  # selected file; the interactive staging and patch-building views (and previews
+  # of a selected directory) always use the unified renderer.
+  sideBySideDiffs: false
 
   # One of 'auto' (default) | 'en' | 'zh-CN' | 'zh-TW' | 'pl' | 'nl' | 'ja' | 'ko'
   # | 'ru' | 'pt'
@@ -830,7 +831,6 @@ keybinding:
     toggleSelectHunk: a
     pickBothHunks: b
     editSelectHunk: E
-    toggleSplitDiffView: s
   submodules:
     init: i
     update: u

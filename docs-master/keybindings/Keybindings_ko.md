@@ -174,7 +174,6 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` v `` | 드래그 선택 전환 |  |
 | `` a `` | Toggle hunk selection | Toggle line-by-line vs. hunk selection mode. |
 | `` <ctrl+o> `` | 선택한 텍스트를 클립보드에 복사 |  |
-| `` s `` | Toggle split diff view | Toggle between a single unified column and two side-by-side columns (old content on the left, new content on the right) in the staging and patch-building views.<br><br>The default can be changed in the config file with the key 'gui.useSplitDiffInStagingView'. |
 | `` o `` | 파일 닫기 | Open file in default application. |
 | `` e `` | 파일 편집 | Open file in external editor. |
 | `` <space> `` | Line(s)을 패치에 추가/삭제 |  |
@@ -191,7 +190,6 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` v `` | 드래그 선택 전환 |  |
 | `` a `` | Toggle hunk selection | Toggle line-by-line vs. hunk selection mode. |
 | `` <ctrl+o> `` | 선택한 텍스트를 클립보드에 복사 |  |
-| `` s `` | Toggle split diff view | Toggle between a single unified column and two side-by-side columns (old content on the left, new content on the right) in the staging and patch-building views.<br><br>The default can be changed in the config file with the key 'gui.useSplitDiffInStagingView'. |
 | `` <space> `` | Staged 전환 | 선택한 행을 staged / unstaged |
 | `` d `` | 변경을 삭제 (git reset) | When unstaged change is selected, discard the change using `git reset`. When staged change is selected, unstage the change. |
 | `` o `` | 파일 닫기 | Open file in default application. |

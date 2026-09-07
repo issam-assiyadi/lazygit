@@ -61,7 +61,6 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` v `` | 切換拖曳選擇 |  |
 | `` a `` | 切換程式碼塊選擇 | 切換逐行選擇與程式碼塊選擇模式。 |
 | `` <ctrl+o> `` | 複製所選文本至剪貼簿 |  |
-| `` s `` | Toggle split diff view | Toggle between a single unified column and two side-by-side columns (old content on the left, new content on the right) in the staging and patch-building views.<br><br>The default can be changed in the config file with the key 'gui.useSplitDiffInStagingView'. |
 | `` o `` | 開啟檔案 | 使用預設軟體開啟 |
 | `` e `` | 編輯檔案 | 使用外部編輯器開啟 |
 | `` <space> `` | 向 (或從) 補丁中添加/刪除行 |  |
@@ -104,7 +103,6 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` v `` | 切換拖曳選擇 |  |
 | `` a `` | 切換程式碼塊選擇 | 切換逐行選擇與程式碼塊選擇模式。 |
 | `` <ctrl+o> `` | 複製所選文本至剪貼簿 |  |
-| `` s `` | Toggle split diff view | Toggle between a single unified column and two side-by-side columns (old content on the left, new content on the right) in the staging and patch-building views.<br><br>The default can be changed in the config file with the key 'gui.useSplitDiffInStagingView'. |
 | `` <space> `` | 切換預存 | 切換現有行的狀態 (已預存/未預存) |
 | `` d `` | 刪除變更 (git reset) | 選取未暫存的變更時，使用 `git reset` 捨棄變更。選取已暫存的變更時，取消暫存變更。 |
 | `` o `` | 開啟檔案 | 使用預設軟體開啟 |

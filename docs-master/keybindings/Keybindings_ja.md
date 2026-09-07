@@ -253,7 +253,6 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` v `` | 範囲選択を切り替え |  |
 | `` a `` | ハンクの選択を切り替える | Toggle line-by-line vs. hunk selection mode. |
 | `` <ctrl+o> `` | 選択したテキストをクリップボードにコピー |  |
-| `` s `` | Toggle split diff view | Toggle between a single unified column and two side-by-side columns (old content on the left, new content on the right) in the staging and patch-building views.<br><br>The default can be changed in the config file with the key 'gui.useSplitDiffInStagingView'. |
 | `` <space> `` | ステージ | 選択された部分のステージ / アンステージを切り替えます。 |
 | `` d `` | 破棄 | ステージされていない変更が選択されている場合、`git reset`を使用して変更を破棄します。ステージされた変更が選択されている場合、変更をアンステージします。 |
 | `` o `` | ファイルを開く | デフォルトのアプリケーションでファイルを開きます。 |
@@ -276,7 +275,6 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` v `` | 範囲選択を切り替え |  |
 | `` a `` | ハンクの選択を切り替える | Toggle line-by-line vs. hunk selection mode. |
 | `` <ctrl+o> `` | 選択したテキストをクリップボードにコピー |  |
-| `` s `` | Toggle split diff view | Toggle between a single unified column and two side-by-side columns (old content on the left, new content on the right) in the staging and patch-building views.<br><br>The default can be changed in the config file with the key 'gui.useSplitDiffInStagingView'. |
 | `` o `` | ファイルを開く | デフォルトのアプリケーションでファイルを開きます。 |
 | `` e `` | ファイルを編集 | 外部エディタでファイルを開きます。 |
 | `` <space> `` | パッチ内の行を切り替え |  |

@@ -247,7 +247,6 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` v `` | Toggle range select |  |
 | `` a `` | Toggle hunk selection | Ativa/desativa modo linha por linha vs. modo de seleção por partes. |
 | `` <ctrl+o> `` | Copiar texto selecionado para área de transferência |  |
-| `` s `` | Toggle split diff view | Toggle between a single unified column and two side-by-side columns (old content on the left, new content on the right) in the staging and patch-building views.<br><br>The default can be changed in the config file with the key 'gui.useSplitDiffInStagingView'. |
 | `` <space> `` | Etapa | Ativar/desativar seleção em staged/unstaged |
 | `` d `` | Descartar | Quando a mudança não desejada for selecionada, descarte a mudança usando `git reset`. Quando a mudança em fase é selecionada, despare a mudança. |
 | `` o `` | Abrir arquivo | Abrir arquivo no aplicativo padrão. |
@@ -294,7 +293,6 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` v `` | Toggle range select |  |
 | `` a `` | Toggle hunk selection | Ativa/desativa modo linha por linha vs. modo de seleção por partes. |
 | `` <ctrl+o> `` | Copiar texto selecionado para área de transferência |  |
-| `` s `` | Toggle split diff view | Toggle between a single unified column and two side-by-side columns (old content on the left, new content on the right) in the staging and patch-building views.<br><br>The default can be changed in the config file with the key 'gui.useSplitDiffInStagingView'. |
 | `` o `` | Abrir arquivo | Abrir arquivo no aplicativo padrão. |
 | `` e `` | Editar arquivo | Abrir arquivo no editor externo. |
 | `` <space> `` | Alternar linhas no caminho |  |

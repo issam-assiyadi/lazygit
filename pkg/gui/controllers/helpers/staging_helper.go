@@ -64,7 +64,13 @@ func (self *StagingHelper) RefreshStagingPanel(focusOpts types.OnFocusOpts) {
 
 	hunkMode := self.c.UserConfig().Gui.UseHunkModeInStagingView
 	showLineNumbers := self.c.UserConfig().Gui.ShowLineNumbersInStagingView
-	splitMode := self.c.UserConfig().Gui.UseSplitDiffInStagingView
+	// The interactive staging view always uses the unified renderer,
+	// regardless of Gui.UseSplitDiffInStagingView: that config only governs
+	// the read-only diff preview shown in the Files panel (see
+	// filesHelper/diffHelper). Interactive per-line staging in split mode
+	// has real correctness sharp edges (see the HUNK-mode selection fix)
+	// that aren't worth the risk here versus a passive preview.
+	splitMode := false
 	mainContext.SetState(
 		patch_exploring.NewState(mainDiff, file.Path, showLineNumbers, mainSelectedLineIdx, mainContext.GetView(), mainContext.GetState(), hunkMode, splitMode),
 	)
