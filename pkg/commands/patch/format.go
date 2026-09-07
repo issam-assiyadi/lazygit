@@ -88,20 +88,29 @@ func (self *patchPresenter) format() string {
 
 	for _, line := range self.patch.header {
 		// always passing false for 'included' here because header lines are not part of the patch
-		appendLine(self.formatLineAux(line, theme.DefaultTextColor.SetBold(), false))
+		appendLine(self.formatLineAux(line, theme.DefaultTextColor.SetBold(), false, nil))
 	}
 
-	for _, hunk := range self.patch.hunks {
+	for hunkIdx, hunk := range self.patch.hunks {
 		appendLine(self.formatHunkHeaderLine(hunk))
 
+		var highlighting []highlightedLine
+		if !self.plain {
+			highlighting = self.patch.hunkHighlighting(hunkIdx)
+		}
+
 		oldLine, newLine := hunk.oldStart, hunk.newStart
-		for _, line := range hunk.bodyLines {
+		for bodyLineIdx, line := range hunk.bodyLines {
 			gutter := self.formatGutter(line.Kind, oldLine, newLine, oldGutterWidth, newGutterWidth)
 			lineStyle := self.patchLineStyle(line)
+			var spans highlightedLine
+			if highlighting != nil {
+				spans = highlighting[bodyLineIdx]
+			}
 			if line.IsChange() {
-				appendLine(gutter + self.formatLine(line.Content, lineStyle, lineIdx))
+				appendLine(gutter + self.formatLine(line.Content, lineStyle, lineIdx, spans))
 			} else {
-				appendLine(gutter + self.formatLineAux(line.Content, lineStyle, false))
+				appendLine(gutter + self.formatLineAux(line.Content, lineStyle, false, spans))
 			}
 
 			switch line.Kind {
@@ -176,16 +185,18 @@ func (self *patchPresenter) patchLineStyle(patchLine *PatchLine) style.TextStyle
 	}
 }
 
-func (self *patchPresenter) formatLine(str string, textStyle style.TextStyle, index int) string {
+func (self *patchPresenter) formatLine(str string, textStyle style.TextStyle, index int, spans highlightedLine) string {
 	included := self.incLineIndices.Includes(index)
 
-	return self.formatLineAux(str, textStyle, included)
+	return self.formatLineAux(str, textStyle, included, spans)
 }
 
 // 'selected' means you've got it highlighted with your cursor
 // 'included' means the line has been included in the patch (only applicable when
 // building a patch)
-func (self *patchPresenter) formatLineAux(str string, textStyle style.TextStyle, included bool) string {
+// 'spans' is the line's syntax highlighting, if any is available; it covers
+// everything in str after the leading +/-/space character.
+func (self *patchPresenter) formatLineAux(str string, textStyle style.TextStyle, included bool, spans highlightedLine) string {
 	if self.plain {
 		return str
 	}
@@ -199,5 +210,34 @@ func (self *patchPresenter) formatLineAux(str string, textStyle style.TextStyle,
 		return firstCharStyle.Sprint(str)
 	}
 
-	return firstCharStyle.Sprint(str[:1]) + textStyle.Sprint(str[1:])
+	rest := str[1:]
+	if formatted, ok := formatHighlightedContent(rest, spans); ok {
+		return firstCharStyle.Sprint(str[:1]) + formatted
+	}
+
+	return firstCharStyle.Sprint(str[:1]) + textStyle.Sprint(rest)
+}
+
+// Renders rest using its syntax-highlighting spans, provided they exactly
+// reconstruct it (guarding against any lexer/reconstruction mismatch).
+// Returns ok=false if spans don't apply, in which case the caller should
+// fall back to uniform coloring.
+func formatHighlightedContent(rest string, spans highlightedLine) (string, bool) {
+	if spans == nil {
+		return "", false
+	}
+
+	var textBuilder strings.Builder
+	for _, span := range spans {
+		textBuilder.WriteString(span.text)
+	}
+	if textBuilder.String() != rest {
+		return "", false
+	}
+
+	var result strings.Builder
+	for _, span := range spans {
+		result.WriteString(span.style.Sprint(span.text))
+	}
+	return result.String(), true
 }

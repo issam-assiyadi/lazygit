@@ -2,6 +2,7 @@ package patch
 
 import (
 	"strconv"
+	"sync"
 
 	"github.com/samber/lo"
 )
@@ -19,6 +20,13 @@ type Patch struct {
 	// highlighting when rendering the patch for a view. May be empty, in
 	// which case syntax highlighting is skipped.
 	filename string
+
+	// lazily computed the first time it's needed, since the same Patch is
+	// typically rendered many times in a row (e.g. once per keystroke while
+	// navigating it) without its content changing.
+	highlightOnce sync.Once
+	// per-hunk syntax highlighting; see highlightPatch.
+	highlighting [][]highlightedLine
 }
 
 // Records the name of the file being diffed, for use in syntax
@@ -27,6 +35,20 @@ type Patch struct {
 func (self *Patch) SetFilename(filename string) *Patch {
 	self.filename = filename
 	return self
+}
+
+// Returns the syntax highlighting for the body lines of the hunk at the
+// given index, indexed the same as that hunk's body lines, or nil if no
+// highlighting is available (e.g. filename doesn't match a known language).
+func (self *Patch) hunkHighlighting(hunkIdx int) []highlightedLine {
+	self.highlightOnce.Do(func() {
+		self.highlighting = highlightPatch(self.hunks, self.filename)
+	})
+
+	if hunkIdx < 0 || hunkIdx >= len(self.highlighting) {
+		return nil
+	}
+	return self.highlighting[hunkIdx]
 }
 
 // Returns a new patch with the specified transformation applied (e.g.

@@ -432,6 +432,7 @@ var tests = []*components.IntegrationTest{
 	staging.StagePartialBlockOfChangesLastLines,
 	staging.StagePartialBlockOfChangesMiddleLines,
 	staging.StageRanges,
+	staging.SyntaxHighlighting,
 	stash.Apply,
 	stash.ApplyPatch,
 	stash.CreateBranch,
