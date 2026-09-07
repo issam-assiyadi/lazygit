@@ -189,6 +189,23 @@ func TestFormatSplitViewRendersContextLineContent(t *testing.T) {
 	assert.Contains(t, result, "context line")
 }
 
+// Regression test for a real crash: WrapViewLinesToWidth expands tabs to
+// spaces internally before wrapping, so a wrapped chunk of a tab-containing
+// line is not a literal substring of the unexpanded line - reconstructing
+// its byte offset via a naive strings.Index into the original line could
+// return -1, producing an inverted (start > end) slice and panicking.
+func TestFormatSplitViewWrapsTabContainingLineWithoutPanicking(t *testing.T) {
+	diff := "diff --git a/f b/f\n--- a/f\n+++ b/f\n@@ -1,1 +1,1 @@\n-old\n+a\ta\ta\ta\ta\ta\ta\ta\ta\ta\ta\ta\ta\ta\t very long line many tabs wrap across rows for sure yes\n"
+
+	patch := Parse(diff)
+
+	assert.NotPanics(t, func() {
+		rendered, rows := patch.FormatSplitView(FormatSplitViewOpts{Width: 30})
+		assert.NotEmpty(t, rendered)
+		assert.NotEmpty(t, rows)
+	})
+}
+
 func TestFormatSplitViewNoChanges(t *testing.T) {
 	patch := Parse(" context only\n")
 	rendered, rows := patch.FormatSplitView(FormatSplitViewOpts{Width: 40})

@@ -229,12 +229,19 @@ func renderSplitCell(line *PatchLine, spans highlightedLine, changed *byteRange,
 	gutter := formatSplitGutter(line.Kind, lineNumber, gutterWidth, included)
 	blankGutter := strings.Repeat(" ", gutterWidth)
 
-	chunks, _, _ := utils.WrapViewLinesToWidth(true, false, rest, contentWidth, 0)
+	// WrapViewLinesToWidth expands tabs to spaces internally before wrapping,
+	// so its returned chunks are substrings of a tab-expanded copy of rest,
+	// not of rest itself. Expand tabs the same way here first (rather than
+	// feeding rest to it directly) so chunk positions can be reliably found
+	// below; wrapText's offsets are then mapped back to rest's via origOffset
+	// before slicing finalSpans, which is keyed to rest's original offsets.
+	wrapText, origOffset := expandTabsWithOffsetMap(rest, splitViewTabWidth)
+	chunks, _, _ := utils.WrapViewLinesToWidth(true, false, wrapText, contentWidth, splitViewTabWidth)
 
 	result := make([]cellLine, 0, len(chunks))
 	pos := 0
 	for i, chunk := range chunks {
-		start := pos + strings.Index(rest[pos:], chunk)
+		start := pos + strings.Index(wrapText[pos:], chunk)
 		end := start + len(chunk)
 		pos = end
 
@@ -243,13 +250,48 @@ func renderSplitCell(line *PatchLine, spans highlightedLine, changed *byteRange,
 			rowGutter = gutter
 		}
 
-		contentText := renderSpans(sliceSpans(finalSpans, start, end))
+		contentText := renderSpans(sliceSpans(finalSpans, origOffset[start], origOffset[end]))
 		result = append(result, cellLine{
 			text:  rowGutter + contentText,
 			width: gutterWidth + uniseg.StringWidth(chunk),
 		})
 	}
 	return result
+}
+
+// splitViewTabWidth matches WrapViewLinesToWidth's own default (used when it
+// receives a tabWidth < 1), so expandTabsWithOffsetMap's expansion agrees
+// with what WrapViewLinesToWidth would have done to rest itself.
+const splitViewTabWidth = 4
+
+// expandTabsWithOffsetMap returns a copy of s with tabs expanded to spaces
+// (mirroring WrapViewLinesToWidth's own per-line tab expansion exactly, so
+// the chunks it returns are substrings of the expanded copy), plus a map
+// from each byte offset in the expanded copy back to the offset in s that
+// produced it - length len(expanded)+1, with the final entry equal to
+// len(s), so both a chunk's start and its (exclusive) end can be mapped.
+func expandTabsWithOffsetMap(s string, tabWidth int) (string, []int) {
+	if tabWidth < 1 {
+		tabWidth = 4
+	}
+
+	var b strings.Builder
+	offsets := make([]int, 0, len(s)+1)
+	for i := range len(s) {
+		if s[i] == '\t' {
+			numSpaces := tabWidth - (i % tabWidth)
+			for range numSpaces {
+				offsets = append(offsets, i)
+				b.WriteByte(' ')
+			}
+		} else {
+			offsets = append(offsets, i)
+			b.WriteByte(s[i])
+		}
+	}
+	offsets = append(offsets, len(s))
+
+	return b.String(), offsets
 }
 
 // formatSplitGutter formats a single-column line-number gutter cell (unlike
