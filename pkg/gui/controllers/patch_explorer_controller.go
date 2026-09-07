@@ -298,13 +298,26 @@ func (self *PatchExplorerController) HandleToggleSelectHunk() error {
 	return nil
 }
 
+// In split mode there's nothing to horizontally scroll (each column wraps
+// to fit), so these repurpose the same keys to move the cursor between the
+// old/new columns instead.
 func (self *PatchExplorerController) HandleScrollLeft() error {
+	if state := self.context.GetState(); state != nil && state.InSplitMode() {
+		state.SelectOldColumn()
+		return nil
+	}
+
 	self.context.GetViewTrait().ScrollLeft()
 
 	return nil
 }
 
 func (self *PatchExplorerController) HandleScrollRight() error {
+	if state := self.context.GetState(); state != nil && state.InSplitMode() {
+		state.SelectNewColumn()
+		return nil
+	}
+
 	self.context.GetViewTrait().ScrollRight()
 
 	return nil

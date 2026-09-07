@@ -80,25 +80,41 @@ func (self *PatchBuildingHelper) RefreshPatchBuildingPanel(opts types.OnFocusOpt
 
 	showLineNumbers := self.c.UserConfig().Gui.ShowLineNumbersInStagingView
 
-	// TEMPORARY: rendering the Secondary panel with the new side-by-side
-	// split renderer, unconditionally, to prove it out on a view with no
-	// cursor/selection to break (see the "split diff view" plan). This will
-	// become an opt-in toggle in a later change.
-	secondaryDiff := self.c.Git().Patch.PatchBuilder.RenderSplitPatchForFile(patch.RenderPatchForFileOpts{
-		Filename:                               file.Path,
-		PreviousPath:                           file.PreviousPath,
-		Plain:                                  false,
-		Reverse:                                false,
-		TurnAddedFilesIntoDiffAgainstEmptyFile: true,
-		ShowLineNumbers:                        showLineNumbers,
-		Width:                                  self.c.Views().PatchBuildingSecondary.InnerWidth(),
-	})
+	// Split mode is fully implemented (renderer + cursor + column selection)
+	// but not yet reachable: the config toggle is a separate change (phase 3
+	// of the "split diff view" plan). Passing false keeps the default
+	// unified rendering, which is also what the existing integration tests
+	// assert against.
+	splitMode := false
+
+	var secondaryDiff string
+	if splitMode {
+		secondaryDiff = self.c.Git().Patch.PatchBuilder.RenderSplitPatchForFile(patch.RenderPatchForFileOpts{
+			Filename:                               file.Path,
+			PreviousPath:                           file.PreviousPath,
+			Plain:                                  false,
+			Reverse:                                false,
+			TurnAddedFilesIntoDiffAgainstEmptyFile: true,
+			ShowLineNumbers:                        showLineNumbers,
+			Width:                                  self.c.Views().PatchBuildingSecondary.InnerWidth(),
+		})
+	} else {
+		secondaryDiff = self.c.Git().Patch.PatchBuilder.RenderPatchForFile(patch.RenderPatchForFileOpts{
+			Filename:                               file.Path,
+			PreviousPath:                           file.PreviousPath,
+			Plain:                                  false,
+			Reverse:                                false,
+			TurnAddedFilesIntoDiffAgainstEmptyFile: true,
+			ShowLineNumbers:                        showLineNumbers,
+			Width:                                  self.c.Views().PatchBuildingSecondary.InnerWidth(),
+		})
+	}
 
 	context := self.c.Contexts().CustomPatchBuilder
 
 	oldState := context.GetState()
 
-	state := patch_exploring.NewState(diff, file.Path, showLineNumbers, selectedLineIdx, context.GetView(), oldState, self.c.UserConfig().Gui.UseHunkModeInStagingView)
+	state := patch_exploring.NewState(diff, file.Path, showLineNumbers, selectedLineIdx, context.GetView(), oldState, self.c.UserConfig().Gui.UseHunkModeInStagingView, splitMode)
 	context.SetState(state)
 	if state == nil {
 		self.Escape()

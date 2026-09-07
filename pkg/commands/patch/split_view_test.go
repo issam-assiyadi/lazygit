@@ -1,8 +1,10 @@
 package patch
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/jesseduffield/generics/set"
 	"github.com/jesseduffield/lazygit/pkg/gui/style"
 	"github.com/jesseduffield/lazygit/pkg/utils"
 	"github.com/stretchr/testify/assert"
@@ -158,14 +160,18 @@ func TestSliceSpans(t *testing.T) {
 }
 
 func TestFormatSplitGutterZeroWidth(t *testing.T) {
-	assert.Equal(t, "", formatSplitGutter(CONTEXT, 5, 0))
+	assert.Equal(t, "", formatSplitGutter(CONTEXT, 5, 0, false))
 }
 
 func TestFormatSplitGutterStylesByKind(t *testing.T) {
-	assert.Equal(t, style.FgRed.Sprint(" 9")+" ", formatSplitGutter(DELETION, 9, 3))
-	assert.Equal(t, style.FgGreen.Sprint(" 9")+" ", formatSplitGutter(ADDITION, 9, 3))
-	assert.Equal(t, style.FgBlackLighter.Sprint(" 9")+" ", formatSplitGutter(CONTEXT, 9, 3))
-	assert.Equal(t, style.FgBlackLighter.Sprint("  ")+" ", formatSplitGutter(HUNK_HEADER, 9, 3))
+	assert.Equal(t, style.FgRed.Sprint(" 9 "), formatSplitGutter(DELETION, 9, 3, false))
+	assert.Equal(t, style.FgGreen.Sprint(" 9 "), formatSplitGutter(ADDITION, 9, 3, false))
+	assert.Equal(t, style.FgBlackLighter.Sprint(" 9 "), formatSplitGutter(CONTEXT, 9, 3, false))
+	assert.Equal(t, style.FgBlackLighter.Sprint("   "), formatSplitGutter(HUNK_HEADER, 9, 3, false))
+}
+
+func TestFormatSplitGutterIncludedAddsBackground(t *testing.T) {
+	assert.Equal(t, style.FgRed.MergeStyle(style.BgGreen).Sprint(" 9 "), formatSplitGutter(DELETION, 9, 3, true))
 }
 
 // Regression test for a bug where context lines (and unpaired change lines)
@@ -292,4 +298,23 @@ func TestFormatSplitViewWrapsLongLineAndPadsShorterColumn(t *testing.T) {
 		assert.Equal(t, bodySplitRows[0], bodySplitRows[i],
 			"continuation row %d must repeat the same patch-line indices", i)
 	}
+}
+
+func TestFormatSplitViewIncludedLinesAreIndependentPerColumn(t *testing.T) {
+	diff := "diff --git a/f b/f\n--- a/f\n+++ b/f\n@@ -1,3 +1,3 @@\n commit  string\n-date    string\n+date1   string\n version string\n"
+
+	patch := Parse(diff)
+	// the modified pair is at global indices 5 (deletion) and 6 (addition);
+	// only mark the deletion as included
+	rendered, _ := patch.FormatSplitView(FormatSplitViewOpts{Width: 40, IncLineIndices: set.NewFromSlice([]int{5})})
+
+	lines := strings.Split(rendered, "\n")
+	modifiedLine := lines[5]
+	halves := strings.SplitN(modifiedLine, splitDivider, 2)
+	if !assert.Len(t, halves, 2) {
+		return
+	}
+	includedPrefix := strings.SplitN(style.FgRed.MergeStyle(style.BgGreen).Sprint("x"), "x", 2)[0]
+	assert.Contains(t, halves[0], includedPrefix, "the old (included) side must have a green background")
+	assert.NotContains(t, halves[1], includedPrefix, "the new (not included) side must not")
 }

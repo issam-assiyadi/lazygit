@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/jesseduffield/generics/set"
 	"github.com/jesseduffield/lazygit/pkg/gui/style"
 	"github.com/jesseduffield/lazygit/pkg/theme"
 	"github.com/jesseduffield/lazygit/pkg/utils"
@@ -28,6 +29,12 @@ type FormatSplitViewOpts struct {
 	// its content to. 0 means don't wrap at all (used by tests that don't
 	// care about a real view's width).
 	Width int
+	// patch-line indices (Patch.Lines() indexing) that are currently
+	// included in the patch being built - each cell whose own patch-line
+	// index is in this set gets a green background tint across its whole
+	// gutter+content, independently of the other column (there's no +/-
+	// marker character in split mode to attach a narrower indicator to).
+	IncLineIndices *set.Set[int]
 }
 
 // SplitRow describes one physical screen row of a FormatSplitView rendering:
@@ -58,6 +65,11 @@ func (self *Patch) FormatSplitView(opts FormatSplitViewOpts) (string, []SplitRow
 func formatSplitView(p *Patch, opts FormatSplitViewOpts) (string, []SplitRow) {
 	if !p.ContainsChanges() {
 		return "", nil
+	}
+
+	includedLineIndices := opts.IncLineIndices
+	if includedLineIndices == nil {
+		includedLineIndices = set.New[int]()
 	}
 
 	oldGutterWidth := p.SplitGutterWidth(opts.ShowLineNumbers, true)
@@ -109,14 +121,16 @@ func formatSplitView(p *Patch, opts FormatSplitViewOpts) (string, []SplitRow) {
 			if row.old != nil {
 				oldIdx = bodyStartIdx + *row.old
 				oldCell = renderSplitCell(hunk.bodyLines[*row.old], spansFor(highlighting, *row.old),
-					intralineDiffFor(intralineDiffs, *row.old), oldNums[*row.old], oldGutterWidth, oldContentWidth)
+					intralineDiffFor(intralineDiffs, *row.old), oldNums[*row.old], oldGutterWidth, oldContentWidth,
+					includedLineIndices.Includes(oldIdx))
 			}
 			newCell := []cellLine{{}}
 			newIdx := -1
 			if row.new != nil {
 				newIdx = bodyStartIdx + *row.new
 				newCell = renderSplitCell(hunk.bodyLines[*row.new], spansFor(highlighting, *row.new),
-					intralineDiffFor(intralineDiffs, *row.new), newNums[*row.new], newGutterWidth, newContentWidth)
+					intralineDiffFor(intralineDiffs, *row.new), newNums[*row.new], newGutterWidth, newContentWidth,
+					includedLineIndices.Includes(newIdx))
 			}
 
 			height := max(len(oldCell), len(newCell))
@@ -202,13 +216,17 @@ func cellLineAt(cell []cellLine, i int) cellLine {
 // gutter) and prefixing the first physical row with the line's
 // single-number gutter (continuation rows get a blank gutter of the same
 // width, matching how the unified view's gutter is only ever shown once per
-// logical line).
-func renderSplitCell(line *PatchLine, spans highlightedLine, changed *byteRange, lineNumber int, gutterWidth int, contentWidth int) []cellLine {
+// logical line). If included, a green background is layered onto the whole
+// cell (gutter and content alike), on every wrapped continuation row too.
+func renderSplitCell(line *PatchLine, spans highlightedLine, changed *byteRange, lineNumber int, gutterWidth int, contentWidth int, included bool) []cellLine {
 	rest := lineContentWithoutSign(line)
 	lineStyle := patchLineStyle(line)
 	finalSpans := applyChangeEmphasis(rest, spans, lineStyle, changed)
+	if included {
+		finalSpans = mergeStyleOntoSpans(finalSpans, style.BgGreen)
+	}
 
-	gutter := formatSplitGutter(line.Kind, lineNumber, gutterWidth)
+	gutter := formatSplitGutter(line.Kind, lineNumber, gutterWidth, included)
 	blankGutter := strings.Repeat(" ", gutterWidth)
 
 	chunks, _, _ := utils.WrapViewLinesToWidth(true, false, rest, contentWidth, 0)
@@ -237,7 +255,7 @@ func renderSplitCell(line *PatchLine, spans highlightedLine, changed *byteRange,
 // formatSplitGutter formats a single-column line-number gutter cell (unlike
 // format.go's formatGutter, which formats the unified view's combined
 // two-number gutter).
-func formatSplitGutter(kind PatchLineKind, lineNumber int, width int) string {
+func formatSplitGutter(kind PatchLineKind, lineNumber int, width int, included bool) string {
 	if width == 0 {
 		return ""
 	}
@@ -256,8 +274,25 @@ func formatSplitGutter(kind PatchLineKind, lineNumber int, width int) string {
 	case NEWLINE_MESSAGE, HUNK_HEADER, PATCH_HEADER:
 		// no line number for these
 	}
+	if included {
+		lineStyle = lineStyle.MergeStyle(style.BgGreen)
+	}
 
-	return lineStyle.Sprint(fmt.Sprintf("%*s", width-1, str)) + " "
+	// the trailing space is styled along with the number (rather than
+	// appended unstyled) so an included cell's background tint isn't left
+	// with a one-character gap between the gutter and the divider/content.
+	return lineStyle.Sprint(fmt.Sprintf("%*s", width-1, str) + " ")
+}
+
+// mergeStyleOntoSpans layers extra onto every span's existing style (e.g.
+// a background tint on top of whatever foreground color/emphasis a span
+// already has).
+func mergeStyleOntoSpans(spans highlightedLine, extra style.TextStyle) highlightedLine {
+	result := make(highlightedLine, len(spans))
+	for i, span := range spans {
+		result[i] = highlightSpan{text: span.text, style: span.style.MergeStyle(extra)}
+	}
+	return result
 }
 
 // sliceSpans returns the portion of spans covering the byte range
