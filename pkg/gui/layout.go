@@ -210,6 +210,14 @@ func (gui *Gui) layout(g *gocui.Gui) error {
 		if err := gui.onResize(); err != nil {
 			return err
 		}
+
+		// The side-by-side diff preview (Gui.SideBySideDiffs) renders a
+		// wrapped string, unlike the pty-based unified diff, which reflows
+		// on resize for free since git re-runs at the new pty width. Ask
+		// the Files panel to re-render so its wrap catches up too.
+		if gui.UserConfig().Gui.SideBySideDiffs && gui.c.Context().CurrentSide() == gui.State.Contexts.Files {
+			gui.State.Contexts.Files.HandleRenderToMain()
+		}
 	}
 
 	for _, context := range contextsToRerender {

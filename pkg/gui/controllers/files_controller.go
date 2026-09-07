@@ -9,6 +9,7 @@ import (
 	"github.com/jesseduffield/generics/set"
 	"github.com/jesseduffield/lazygit/pkg/commands/git_commands"
 	"github.com/jesseduffield/lazygit/pkg/commands/models"
+	"github.com/jesseduffield/lazygit/pkg/commands/patch"
 	"github.com/jesseduffield/lazygit/pkg/gocui"
 	"github.com/jesseduffield/lazygit/pkg/gui/context"
 	"github.com/jesseduffield/lazygit/pkg/gui/filetree"
@@ -370,7 +371,6 @@ func (self *FilesController) renderWorkingTreeDiff(node *filetree.FileNode) {
 	mainShowsStaged := !split && node.GetHasStagedChanges()
 
 	paths := self.pathsForDiff(node)
-	cmdObj := self.c.Git().WorkingTree.WorktreeFileDiffCmdObj(node, false, mainShowsStaged, paths)
 	title := self.c.Tr.UnstagedChanges
 	if mainShowsStaged {
 		title = self.c.Tr.StagedChanges
@@ -378,15 +378,13 @@ func (self *FilesController) renderWorkingTreeDiff(node *filetree.FileNode) {
 	refreshOpts := types.RefreshMainOpts{
 		Pair: self.c.MainViewPairs().Normal,
 		Main: &types.ViewUpdateOpts{
-			Task:     types.NewRunPtyTask(cmdObj.GetCmd()),
+			Task:     self.diffTask(node, mainShowsStaged, paths, self.c.Views().Main),
 			SubTitle: self.c.Helpers().Diff.IgnoringWhitespaceSubTitle(),
 			Title:    title,
 		},
 	}
 
 	if split {
-		cmdObj := self.c.Git().WorkingTree.WorktreeFileDiffCmdObj(node, false, true, paths)
-
 		title := self.c.Tr.StagedChanges
 		if mainShowsStaged {
 			title = self.c.Tr.UnstagedChanges
@@ -395,11 +393,29 @@ func (self *FilesController) renderWorkingTreeDiff(node *filetree.FileNode) {
 		refreshOpts.Secondary = &types.ViewUpdateOpts{
 			Title:    title,
 			SubTitle: self.c.Helpers().Diff.IgnoringWhitespaceSubTitle(),
-			Task:     types.NewRunPtyTask(cmdObj.GetCmd()),
+			Task:     self.diffTask(node, true, paths, self.c.Views().Secondary),
 		}
 	}
 
 	self.c.RenderToMainViews(refreshOpts)
+}
+
+// diffTask picks the render for one side of the working-tree diff view.
+// Side-by-side rendering only applies to a single selected file (not a
+// selected directory, which diffs multiple paths at once and isn't
+// representable as one patch.Patch), and bypasses the external
+// diffRenderers pty pipeline (delta/hunk etc.) entirely, since that's a
+// separate rendering mechanism from the native split-view renderer.
+func (self *FilesController) diffTask(node *filetree.FileNode, cached bool, paths []string, view *gocui.View) types.UpdateTask {
+	if self.c.UserConfig().Gui.SideBySideDiffs && node.GetIsFile() {
+		diff := self.c.Git().WorkingTree.WorktreeFileDiff(node.File, true, cached)
+		p := patch.Parse(diff).SetFilename(node.GetPath())
+		rendered, _ := p.FormatSplitView(patch.FormatSplitViewOpts{Width: view.InnerWidth()})
+		return types.NewRenderStringWithoutScrollTask(rendered)
+	}
+
+	cmdObj := self.c.Git().WorkingTree.WorktreeFileDiffCmdObj(node, false, cached, paths)
+	return types.NewRunPtyTask(cmdObj.GetCmd())
 }
 
 func (self *FilesController) GetOnDoubleClick() func() error {
