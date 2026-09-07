@@ -67,7 +67,7 @@ func NewState(diff string, filename string, showLineNumbers bool, selectedLineId
 	}
 
 	gutterWidth := patch.GutterWidth(showLineNumbers)
-	viewLineIndices, patchLineIndices := wrapPatchLines(diff, gutterWidth, view)
+	viewLineIndices, patchLineIndices := wrapPatchLines(patch, gutterWidth, view)
 
 	rangeStartLineIdx := 0
 	if oldState != nil {
@@ -144,7 +144,7 @@ func (s *State) OnViewWidthChanged(view *gocui.View) {
 	if s.selectMode == RANGE {
 		rangeStartPatchLineIdx = s.patchLineIndices[s.rangeStartLineIdx]
 	}
-	s.viewLineIndices, s.patchLineIndices = wrapPatchLines(s.diff, s.gutterWidth, view)
+	s.viewLineIndices, s.patchLineIndices = wrapPatchLines(s.patch, s.gutterWidth, view)
 	s.selectedLineIdx = s.viewLineIndices[selectedPatchLineIdx]
 	if s.selectMode == RANGE {
 		s.rangeStartLineIdx = s.viewLineIndices[rangeStartPatchLineIdx]
@@ -434,16 +434,33 @@ func (s *State) CalculateOrigin(currentOrigin int, bufferHeight int, numLines in
 	return calculateOrigin(currentOrigin, bufferHeight, numLines, firstLineIdx, lastLineIdx, s.GetSelectedViewLineIdx(), s.selectMode)
 }
 
-func wrapPatchLines(diff string, gutterWidth int, view *gocui.View) ([]int, []int) {
-	// The line-number gutter isn't part of `diff` (it's added later by
-	// Patch.FormatView), but it still takes up screen space, so the width we
-	// wrap against here needs to account for it too, or this wrapping
-	// computation and the view's own wrapping of the final rendered string
-	// would disagree about where lines break.
-	width := max(1, view.InnerWidth()-gutterWidth)
+func wrapPatchLines(p *patch.Patch, gutterWidth int, view *gocui.View) ([]int, []int) {
+	// Patch.FormatView adds the line-number gutter as a per-line prefix, not
+	// part of the underlying diff text, so we reconstruct that same prefix
+	// here and wrap it at the view's actual width. This has to match
+	// FormatView's own gutter placement exactly (including which lines get
+	// no gutter at all), or this wrapping computation and the view's own
+	// wrapping of the real rendered content would disagree about where
+	// lines break, desyncing the cursor from what's on screen.
+	text := gutterPaddedText(p, gutterWidth)
 	_, viewLineIndices, patchLineIndices := utils.WrapViewLinesToWidth(
-		view.Wrap, view.Editable, strings.TrimSuffix(diff, "\n"), width, view.TabWidth)
+		view.Wrap, view.Editable, text, view.InnerWidth(), view.TabWidth)
 	return viewLineIndices, patchLineIndices
+}
+
+func gutterPaddedText(p *patch.Patch, gutterWidth int) string {
+	lines := p.Lines()
+	paddedLines := make([]string, len(lines))
+	gutterPlaceholder := strings.Repeat(" ", gutterWidth)
+	for i, line := range lines {
+		// header and hunk-header lines get no gutter (see Patch.FormatView)
+		if gutterWidth > 0 && line.Kind != patch.PATCH_HEADER && line.Kind != patch.HUNK_HEADER {
+			paddedLines[i] = gutterPlaceholder + line.Content
+		} else {
+			paddedLines[i] = line.Content
+		}
+	}
+	return strings.Join(paddedLines, "\n")
 }
 
 func (s *State) SelectNextStageableLineOfSameIncludedState(includedLines []int, included bool) {
