@@ -266,7 +266,11 @@ func (p *PatchBuilder) RenderSplitPatchForFile(opts RenderPatchForFileOpts) stri
 
 	patch := transformedPatchForFile(opts, info)
 
-	return patch.FormatSplitView(FormatSplitViewOpts{ShowLineNumbers: opts.ShowLineNumbers, Width: opts.Width})
+	// the Secondary panel this is rendered into has no cursor, so the
+	// physical-row mapping isn't needed here (the interactive main-panel
+	// split view does need it, and consumes FormatSplitView directly).
+	rendered, _ := patch.FormatSplitView(FormatSplitViewOpts{ShowLineNumbers: opts.ShowLineNumbers, Width: opts.Width})
+	return rendered
 }
 
 func transformedPatchForFile(opts RenderPatchForFileOpts, info *fileInfo) *Patch {

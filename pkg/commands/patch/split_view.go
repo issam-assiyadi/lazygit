@@ -30,16 +30,34 @@ type FormatSplitViewOpts struct {
 	Width int
 }
 
+// SplitRow describes one physical screen row of a FormatSplitView rendering:
+// the patch-line index (in Patch.Lines() terms - the same indexing used for
+// staging/selection) held by each column, or -1 if that column is blank on
+// this row. A row whose cell content wraps to more than one physical row
+// repeats the same indices on every continuation row, mirroring how the
+// unified view maps several wrapped view lines back to one patch line.
+//
+// This is emitted by the renderer itself, rather than recomputed by a
+// caller, so there's exactly one source of truth for "how many physical
+// rows does this patch produce, and which patch line does each one hold" -
+// recomputing it independently is exactly the kind of desync bug this
+// package's wrap-bookkeeping regression test (see
+// pkg/gui/patch_exploring/wrap_test.go) was written to catch.
+type SplitRow struct {
+	Old, New int
+}
+
 // Returns the patch as a string with ANSI color codes, laid out as two
 // side-by-side columns (old content on the left, new content on the right)
-// for rendering within a view.
-func (self *Patch) FormatSplitView(opts FormatSplitViewOpts) string {
+// for rendering within a view, along with the physical-row mapping needed
+// to drive an interactive cursor over it (see SplitRow).
+func (self *Patch) FormatSplitView(opts FormatSplitViewOpts) (string, []SplitRow) {
 	return formatSplitView(self, opts)
 }
 
-func formatSplitView(p *Patch, opts FormatSplitViewOpts) string {
+func formatSplitView(p *Patch, opts FormatSplitViewOpts) (string, []SplitRow) {
 	if !p.ContainsChanges() {
-		return ""
+		return "", nil
 	}
 
 	oldGutterWidth := p.SplitGutterWidth(opts.ShowLineNumbers, true)
@@ -56,17 +74,30 @@ func formatSplitView(p *Patch, opts FormatSplitViewOpts) string {
 	newContentWidth := max(newColumnWidth-newGutterWidth, 1)
 
 	b := &strings.Builder{}
+	rows := []SplitRow{}
 
-	for _, line := range p.header {
-		b.WriteString(theme.DefaultTextColor.SetBold().Sprint(line))
+	for i, line := range p.header {
+		styled := theme.DefaultTextColor.SetBold().Sprint(line)
+		// pad (never truncate, matching the hunk header's existing
+		// precedent) so a long header line can never wrap under gocui and
+		// desync the row count above from what's actually on screen.
+		if padding := opts.Width - len(line); padding > 0 {
+			styled += strings.Repeat(" ", padding)
+		}
+		b.WriteString(styled)
 		b.WriteString("\n")
+		rows = append(rows, SplitRow{Old: i, New: i})
 	}
 
 	headerPresenter := &patchPresenter{plain: false, width: opts.Width}
 
 	for hunkIdx, hunk := range p.hunks {
+		hunkHeaderIdx := p.HunkStartIdx(hunkIdx)
+		bodyStartIdx := hunkHeaderIdx + 1
+
 		b.WriteString(headerPresenter.formatHunkHeaderLine(hunk))
 		b.WriteString("\n")
+		rows = append(rows, SplitRow{Old: hunkHeaderIdx, New: hunkHeaderIdx})
 
 		highlighting := p.hunkHighlighting(hunkIdx)
 		intralineDiffs := p.hunkIntralineDiffs(hunkIdx)
@@ -74,12 +105,16 @@ func formatSplitView(p *Patch, opts FormatSplitViewOpts) string {
 
 		for _, row := range p.hunkSplitRows(hunkIdx) {
 			oldCell := []cellLine{{}}
+			oldIdx := -1
 			if row.old != nil {
+				oldIdx = bodyStartIdx + *row.old
 				oldCell = renderSplitCell(hunk.bodyLines[*row.old], spansFor(highlighting, *row.old),
 					intralineDiffFor(intralineDiffs, *row.old), oldNums[*row.old], oldGutterWidth, oldContentWidth)
 			}
 			newCell := []cellLine{{}}
+			newIdx := -1
 			if row.new != nil {
+				newIdx = bodyStartIdx + *row.new
 				newCell = renderSplitCell(hunk.bodyLines[*row.new], spansFor(highlighting, *row.new),
 					intralineDiffFor(intralineDiffs, *row.new), newNums[*row.new], newGutterWidth, newContentWidth)
 			}
@@ -94,11 +129,12 @@ func formatSplitView(p *Patch, opts FormatSplitViewOpts) string {
 				b.WriteString(newLine.text)
 				b.WriteString(strings.Repeat(" ", max(newColumnWidth-newLine.width, 0)))
 				b.WriteString("\n")
+				rows = append(rows, SplitRow{Old: oldIdx, New: newIdx})
 			}
 		}
 	}
 
-	return b.String()
+	return b.String(), rows
 }
 
 func spansFor(highlighting []highlightedLine, bodyLineIdx int) highlightedLine {

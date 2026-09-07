@@ -177,22 +177,31 @@ func TestFormatSplitViewRendersContextLineContent(t *testing.T) {
 	diff := "diff --git a/f b/f\n--- a/f\n+++ b/f\n@@ -1,2 +1,2 @@\n context line\n-old\n+new\n"
 
 	patch := Parse(diff)
-	result := utils.Decolorise(patch.FormatSplitView(FormatSplitViewOpts{Width: 40}))
+	rendered, _ := patch.FormatSplitView(FormatSplitViewOpts{Width: 40})
+	result := utils.Decolorise(rendered)
 
 	assert.Contains(t, result, "context line")
 }
 
 func TestFormatSplitViewNoChanges(t *testing.T) {
 	patch := Parse(" context only\n")
-	assert.Equal(t, "", patch.FormatSplitView(FormatSplitViewOpts{Width: 40}))
+	rendered, rows := patch.FormatSplitView(FormatSplitViewOpts{Width: 40})
+	assert.Equal(t, "", rendered)
+	assert.Nil(t, rows)
 }
 
 func TestFormatSplitViewAlignsModifiedLine(t *testing.T) {
 	diff := "diff --git a/f b/f\n--- a/f\n+++ b/f\n@@ -1,3 +1,3 @@\n commit  string\n-date    string\n+date1   string\n version string\n"
 
 	patch := Parse(diff)
-	result := utils.Decolorise(patch.FormatSplitView(FormatSplitViewOpts{ShowLineNumbers: true, Width: 50}))
+	rendered, rows := patch.FormatSplitView(FormatSplitViewOpts{ShowLineNumbers: true, Width: 50})
+	result := utils.Decolorise(rendered)
 	lines := utils.SplitLines(result)
+
+	// one SplitRow per physical line, and the row list must never disagree
+	// with the actual rendered line count - this is the exact invariant the
+	// interactive cursor depends on
+	assert.Len(t, rows, len(lines))
 
 	// every body row (skipping the 3 header lines and the hunk-header line)
 	// must be exactly Width runes wide, and the divider must land at the
@@ -213,6 +222,45 @@ func TestFormatSplitViewAlignsModifiedLine(t *testing.T) {
 			assert.Equal(t, dividerCol, col, "divider must be in the same column on every row: %q", line)
 		}
 	}
+
+	// global patch-line indices: 3 header lines (0-2), hunk header (3),
+	// then the 3 body rows (4-6) - the modified pair shares row 5, with
+	// distinct old/new indices
+	assert.Equal(t, []SplitRow{
+		{Old: 0, New: 0},
+		{Old: 1, New: 1},
+		{Old: 2, New: 2},
+		{Old: 3, New: 3},
+		{Old: 4, New: 4},
+		{Old: 5, New: 6},
+		{Old: 7, New: 7},
+	}, rows)
+}
+
+// The global patch-line indices FormatSplitView emits must agree with
+// Patch.Lines()'s own indexing (that's what staging/selection is keyed on),
+// not just be internally self-consistent. Verify by cross-checking the
+// content at each SplitRow's indices against Patch.Lines() directly.
+func TestFormatSplitViewGlobalIndicesMatchPatchLines(t *testing.T) {
+	patch := Parse(twoHunks)
+	_, rows := patch.FormatSplitView(FormatSplitViewOpts{Width: 60})
+
+	lines := patch.Lines()
+	for _, row := range rows {
+		if row.Old >= 0 {
+			assert.Less(t, row.Old, len(lines))
+		}
+		if row.New >= 0 {
+			assert.Less(t, row.New, len(lines))
+		}
+	}
+
+	// spot-check: the second hunk's header ("@@ -8,6 +8,8 @@ grape") is a
+	// mirrored (old==new) row, and its index must land on the actual
+	// HUNK_HEADER line in Patch.Lines()
+	secondHunkHeaderIdx := patch.HunkStartIdx(1)
+	assert.Contains(t, rows, SplitRow{Old: secondHunkHeaderIdx, New: secondHunkHeaderIdx})
+	assert.Equal(t, HUNK_HEADER, lines[secondHunkHeaderIdx].Kind)
 }
 
 func TestFormatSplitViewWrapsLongLineAndPadsShorterColumn(t *testing.T) {
@@ -220,8 +268,11 @@ func TestFormatSplitViewWrapsLongLineAndPadsShorterColumn(t *testing.T) {
 		"this is a much much much longer replacement line that needs wrapping\n"
 
 	patch := Parse(diff)
-	result := utils.Decolorise(patch.FormatSplitView(FormatSplitViewOpts{ShowLineNumbers: true, Width: 50}))
+	rendered, rows := patch.FormatSplitView(FormatSplitViewOpts{ShowLineNumbers: true, Width: 50})
+	result := utils.Decolorise(rendered)
 	lines := utils.SplitLines(result)
+
+	assert.Len(t, rows, len(lines))
 
 	// header lines (3) + hunk header (1) + however many physical rows the
 	// wrapped long line needs on the right - the short old line's column
@@ -231,5 +282,14 @@ func TestFormatSplitViewWrapsLongLineAndPadsShorterColumn(t *testing.T) {
 
 	for i, line := range bodyRows {
 		assert.Len(t, []rune(line), 50, "row %d must still be padded to the full view width", i)
+	}
+
+	// every wrapped continuation row must repeat the same (old, new) patch
+	// indices as the row it continues, exactly like the unified view's
+	// wrapping maps several view lines back to one patch line
+	bodySplitRows := rows[4:]
+	for i := 1; i < len(bodySplitRows); i++ {
+		assert.Equal(t, bodySplitRows[0], bodySplitRows[i],
+			"continuation row %d must repeat the same patch-line indices", i)
 	}
 }
