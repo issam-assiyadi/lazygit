@@ -68,8 +68,9 @@ func (self *patchTransformer) transform() *Patch {
 	hunks := self.transformHunks()
 
 	return &Patch{
-		header: header,
-		hunks:  hunks,
+		header:   header,
+		hunks:    hunks,
+		filename: self.patch.filename,
 	}
 }
 

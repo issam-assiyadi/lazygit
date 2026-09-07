@@ -13,6 +13,18 @@ type Patch struct {
 	header []string
 	// hunks of the patch
 	hunks []*Hunk
+	// name of the file being diffed. Used for language-aware syntax
+	// highlighting when rendering the patch for a view. May be empty, in
+	// which case syntax highlighting is skipped.
+	filename string
+}
+
+// Records the name of the file being diffed, for use in syntax
+// highlighting. Returns the patch itself so that it can be chained onto
+// Parse().
+func (self *Patch) SetFilename(filename string) *Patch {
+	self.filename = filename
+	return self
 }
 
 // Returns a new patch with the specified transformation applied (e.g.

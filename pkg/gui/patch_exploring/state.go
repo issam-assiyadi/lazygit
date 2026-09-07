@@ -45,7 +45,7 @@ const (
 	HUNK
 )
 
-func NewState(diff string, selectedLineIdx int, view *gocui.View, oldState *State, useHunkModeByDefault bool) *State {
+func NewState(diff string, filename string, selectedLineIdx int, view *gocui.View, oldState *State, useHunkModeByDefault bool) *State {
 	if oldState != nil && diff == oldState.diff && selectedLineIdx == -1 {
 		// if we're here then we can return the old state. If selectedLineIdx was not -1
 		// then that would mean we were trying to click and potentially drag a range, which
@@ -53,7 +53,7 @@ func NewState(diff string, selectedLineIdx int, view *gocui.View, oldState *Stat
 		return oldState
 	}
 
-	patch := patch.Parse(diff)
+	patch := patch.Parse(diff).SetFilename(filename)
 
 	if !patch.ContainsChanges() {
 		return nil

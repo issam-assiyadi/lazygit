@@ -229,6 +229,7 @@ func (p *PatchBuilder) RenderPatchForFile(opts RenderPatchForFileOpts) string {
 	}
 
 	patch := Parse(info.diff).
+		SetFilename(opts.Filename).
 		Transform(TransformOpts{
 			Reverse:                                opts.Reverse,
 			TurnAddedFilesIntoDiffAgainstEmptyFile: opts.TurnAddedFilesIntoDiffAgainstEmptyFile,
