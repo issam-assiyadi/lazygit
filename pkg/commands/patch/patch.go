@@ -27,6 +27,11 @@ type Patch struct {
 	highlightOnce sync.Once
 	// per-hunk syntax highlighting; see highlightPatch.
 	highlighting [][]highlightedLine
+
+	// lazily computed, same rationale as highlightOnce above.
+	intralineOnce sync.Once
+	// per-hunk within-line diff ranges; see computeIntralineDiffs.
+	intralineDiffs [][]*byteRange
 }
 
 // Records the name of the file being diffed, for use in syntax
@@ -49,6 +54,21 @@ func (self *Patch) hunkHighlighting(hunkIdx int) []highlightedLine {
 		return nil
 	}
 	return self.highlighting[hunkIdx]
+}
+
+// Returns the within-line diff ranges for the body lines of the hunk at the
+// given index, indexed the same as that hunk's body lines, or nil if the
+// hunk index is out of range. Entries are nil for lines that aren't part of
+// a detected 1:1 modification pair; see computeIntralineDiffs.
+func (self *Patch) hunkIntralineDiffs(hunkIdx int) []*byteRange {
+	self.intralineOnce.Do(func() {
+		self.intralineDiffs = computeIntralineDiffs(self.hunks)
+	})
+
+	if hunkIdx < 0 || hunkIdx >= len(self.intralineDiffs) {
+		return nil
+	}
+	return self.intralineDiffs[hunkIdx]
 }
 
 // Returns a new patch with the specified transformation applied (e.g.

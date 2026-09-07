@@ -105,8 +105,10 @@ func (self *patchPresenter) format() string {
 		appendLine(self.formatHunkHeaderLine(hunk))
 
 		var highlighting []highlightedLine
+		var intralineDiffs []*byteRange
 		if !self.plain {
 			highlighting = self.patch.hunkHighlighting(hunkIdx)
+			intralineDiffs = self.patch.hunkIntralineDiffs(hunkIdx)
 		}
 
 		oldLine, newLine := hunk.oldStart, hunk.newStart
@@ -118,6 +120,11 @@ func (self *patchPresenter) format() string {
 				spans = highlighting[bodyLineIdx]
 			}
 			if line.IsChange() {
+				var changed *byteRange
+				if intralineDiffs != nil {
+					changed = intralineDiffs[bodyLineIdx]
+				}
+				spans = applyChangeEmphasis(lineContentWithoutSign(line), spans, lineStyle, changed)
 				appendLine(gutter + self.formatLine(line.Content, lineStyle, lineIdx, spans))
 			} else {
 				appendLine(gutter + self.formatLineAux(line.Content, lineStyle, false, spans))
