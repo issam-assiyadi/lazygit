@@ -80,12 +80,7 @@ func (self *PatchBuildingHelper) RefreshPatchBuildingPanel(opts types.OnFocusOpt
 
 	showLineNumbers := self.c.UserConfig().Gui.ShowLineNumbersInStagingView
 
-	// Split mode is fully implemented (renderer + cursor + column selection)
-	// but not yet reachable: the config toggle is a separate change (phase 3
-	// of the "split diff view" plan). Passing false keeps the default
-	// unified rendering, which is also what the existing integration tests
-	// assert against.
-	splitMode := false
+	splitMode := self.c.UserConfig().Gui.UseSplitDiffInStagingView
 
 	var secondaryDiff string
 	if splitMode {

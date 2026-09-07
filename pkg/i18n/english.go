@@ -791,6 +791,8 @@ type TranslationSet struct {
 	RandomTip                                string
 	ToggleWhitespaceInDiffView               string
 	ToggleWhitespaceInDiffViewTooltip        string
+	ToggleSplitDiffView                      string
+	ToggleSplitDiffViewTooltip               string
 	IgnoreWhitespaceDiffViewSubTitle         string
 	IgnoreWhitespaceNotSupportedHere         string
 	IncreaseContextInDiffView                string
@@ -1953,6 +1955,8 @@ func EnglishTranslationSet() *TranslationSet {
 		RandomTip:                                "Random tip",
 		ToggleWhitespaceInDiffView:               "Toggle whitespace",
 		ToggleWhitespaceInDiffViewTooltip:        "Toggle whether or not whitespace changes are shown in the diff view.\n\nThe default can be changed in the config file with the key 'git.ignoreWhitespaceInDiffView'.",
+		ToggleSplitDiffView:                      "Toggle split diff view",
+		ToggleSplitDiffViewTooltip:               "Toggle between a single unified column and two side-by-side columns (old content on the left, new content on the right) in the staging and patch-building views.\n\nThe default can be changed in the config file with the key 'gui.useSplitDiffInStagingView'.",
 		IgnoreWhitespaceDiffViewSubTitle:         "(ignoring whitespace)",
 		IgnoreWhitespaceNotSupportedHere:         "Ignoring whitespace is not supported in this view",
 		IncreaseContextInDiffView:                "Increase diff context size",

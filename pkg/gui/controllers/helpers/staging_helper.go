@@ -64,12 +64,7 @@ func (self *StagingHelper) RefreshStagingPanel(focusOpts types.OnFocusOpts) {
 
 	hunkMode := self.c.UserConfig().Gui.UseHunkModeInStagingView
 	showLineNumbers := self.c.UserConfig().Gui.ShowLineNumbersInStagingView
-	// Split mode is fully implemented (renderer + cursor + column selection)
-	// but not yet reachable: the config toggle is a separate change (phase 3
-	// of the "split diff view" plan). Passing false keeps the default
-	// unified rendering, which is also what the existing integration tests
-	// assert against.
-	splitMode := false
+	splitMode := self.c.UserConfig().Gui.UseSplitDiffInStagingView
 	mainContext.SetState(
 		patch_exploring.NewState(mainDiff, file.Path, showLineNumbers, mainSelectedLineIdx, mainContext.GetView(), mainContext.GetState(), hunkMode, splitMode),
 	)

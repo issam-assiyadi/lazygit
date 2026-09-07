@@ -235,6 +235,7 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` v `` | Toggle range select |  |
 | `` a `` | Toggle hunk selection | Toggle line-by-line vs. hunk selection mode. |
 | `` <ctrl+o> `` | Copy selected text to clipboard |  |
+| `` s `` | Toggle split diff view | Toggle between a single unified column and two side-by-side columns (old content on the left, new content on the right) in the staging and patch-building views.<br><br>The default can be changed in the config file with the key 'gui.useSplitDiffInStagingView'. |
 | `` o `` | Open file | Open file in default application. |
 | `` e `` | Edit file | Open file in external editor. |
 | `` <space> `` | Toggle lines in patch |  |
@@ -251,6 +252,7 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` v `` | Toggle range select |  |
 | `` a `` | Toggle hunk selection | Toggle line-by-line vs. hunk selection mode. |
 | `` <ctrl+o> `` | Copy selected text to clipboard |  |
+| `` s `` | Toggle split diff view | Toggle between a single unified column and two side-by-side columns (old content on the left, new content on the right) in the staging and patch-building views.<br><br>The default can be changed in the config file with the key 'gui.useSplitDiffInStagingView'. |
 | `` <space> `` | Stage | Toggle selection staged / unstaged. |
 | `` d `` | Discard | When unstaged change is selected, discard the change using `git reset`. When staged change is selected, unstage the change. |
 | `` o `` | Open file | Open file in default application. |

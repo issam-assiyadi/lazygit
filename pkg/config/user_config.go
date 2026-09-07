@@ -135,6 +135,8 @@ type GuiConfig struct {
 	UseHunkModeInStagingView bool `yaml:"useHunkModeInStagingView"`
 	// If true, show old/new line numbers alongside each line in the staging and patch-building views.
 	ShowLineNumbersInStagingView bool `yaml:"showLineNumbersInStagingView"`
+	// If true, render the staging and patch-building views as two side-by-side columns (old content on the left, new content on the right) instead of a single unified column. Can be toggled at runtime with 'toggleSplitDiffView' (default 's').
+	UseSplitDiffInStagingView bool `yaml:"useSplitDiffInStagingView"`
 	// One of 'auto' (default) | 'en' | 'zh-CN' | 'zh-TW' | 'pl' | 'nl' | 'ja' | 'ko' | 'ru' | 'pt'
 	Language string `yaml:"language" jsonschema:"enum=auto,enum=en,enum=zh-TW,enum=zh-CN,enum=pl,enum=nl,enum=ja,enum=ko,enum=ru"`
 	// Format used when displaying time e.g. commit time.
@@ -660,11 +662,12 @@ type KeybindingCommitFilesConfig struct {
 }
 
 type KeybindingMainConfig struct {
-	PrevHunk         Keybinding `yaml:"prevHunk"`
-	NextHunk         Keybinding `yaml:"nextHunk"`
-	ToggleSelectHunk Keybinding `yaml:"toggleSelectHunk"`
-	PickBothHunks    Keybinding `yaml:"pickBothHunks"`
-	EditSelectHunk   Keybinding `yaml:"editSelectHunk"`
+	PrevHunk            Keybinding `yaml:"prevHunk"`
+	NextHunk            Keybinding `yaml:"nextHunk"`
+	ToggleSelectHunk    Keybinding `yaml:"toggleSelectHunk"`
+	PickBothHunks       Keybinding `yaml:"pickBothHunks"`
+	EditSelectHunk      Keybinding `yaml:"editSelectHunk"`
+	ToggleSplitDiffView Keybinding `yaml:"toggleSplitDiffView"`
 }
 
 type KeybindingSubmodulesConfig struct {
@@ -881,6 +884,7 @@ func GetDefaultConfigForPlatform(platform string) *UserConfig {
 			WrapLinesInStagingView:       true,
 			UseHunkModeInStagingView:     true,
 			ShowLineNumbersInStagingView: true,
+			UseSplitDiffInStagingView:    false,
 			Language:                     "auto",
 			TimeFormat:                   "02 Jan 06",
 			ShortTimeFormat:              time.Kitchen,
@@ -1171,11 +1175,12 @@ func GetDefaultConfigForPlatform(platform string) *UserConfig {
 				CheckoutCommitFile: Keybinding{"c"},
 			},
 			Main: KeybindingMainConfig{
-				PrevHunk:         Keybinding{"<left>", "h"},
-				NextHunk:         Keybinding{"<right>", "l"},
-				ToggleSelectHunk: Keybinding{"a"},
-				PickBothHunks:    Keybinding{"b"},
-				EditSelectHunk:   Keybinding{"E"},
+				PrevHunk:            Keybinding{"<left>", "h"},
+				NextHunk:            Keybinding{"<right>", "l"},
+				ToggleSelectHunk:    Keybinding{"a"},
+				PickBothHunks:       Keybinding{"b"},
+				EditSelectHunk:      Keybinding{"E"},
+				ToggleSplitDiffView: Keybinding{"s"},
 			},
 			Submodules: KeybindingSubmodulesConfig{
 				Init:     Keybinding{"i"},

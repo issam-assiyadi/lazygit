@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/jesseduffield/lazygit/pkg/gocui"
+	"github.com/jesseduffield/lazygit/pkg/gui/context"
 	"github.com/jesseduffield/lazygit/pkg/gui/controllers/helpers"
 	"github.com/jesseduffield/lazygit/pkg/gui/types"
 	"github.com/samber/lo"
@@ -137,6 +138,12 @@ func (self *PatchExplorerController) GetKeybindings(opts types.KeybindingsOpts) 
 			Keys:        opts.GetKeys(opts.Config.Universal.CopyToClipboard),
 			Handler:     self.withLock(self.CopySelectedToClipboard),
 			Description: self.c.Tr.CopySelectedTextToClipboard,
+		},
+		{
+			Keys:        opts.GetKeys(opts.Config.Main.ToggleSplitDiffView),
+			Handler:     self.HandleToggleSplitDiffView,
+			Description: self.c.Tr.ToggleSplitDiffView,
+			Tooltip:     self.c.Tr.ToggleSplitDiffViewTooltip,
 		},
 	}
 }
@@ -319,6 +326,25 @@ func (self *PatchExplorerController) HandleScrollRight() error {
 	}
 
 	self.context.GetViewTrait().ScrollRight()
+
+	return nil
+}
+
+// Flips the split-diff-view config and fully refreshes the panel: unlike
+// most actions here, this changes the cursor model itself (row/column vs
+// flat index), so it needs a fresh patch_exploring.State rather than just a
+// re-render of the existing one. Deliberately bypasses withLock/
+// withRenderAndFocus, since the refresh helpers below grab the same
+// context's mutex themselves.
+func (self *PatchExplorerController) HandleToggleSplitDiffView() error {
+	self.c.UserConfig().Gui.UseSplitDiffInStagingView = !self.c.UserConfig().Gui.UseSplitDiffInStagingView
+
+	switch self.context.GetKey() {
+	case context.STAGING_MAIN_CONTEXT_KEY, context.STAGING_SECONDARY_CONTEXT_KEY:
+		self.c.Helpers().Staging.RefreshStagingPanel(types.OnFocusOpts{})
+	case context.PATCH_BUILDING_MAIN_CONTEXT_KEY:
+		self.c.Helpers().PatchBuilding.RefreshPatchBuildingPanel(types.OnFocusOpts{})
+	}
 
 	return nil
 }

@@ -243,6 +243,7 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` v `` | Toggle drag selecteer |  |
 | `` a `` | Wissel tussen hunk selectie aan of uit | Wissel tussen regel-voor-regel of hunk selectie modus. |
 | `` <ctrl+o> `` | Copy selected text to clipboard |  |
+| `` s `` | Toggle split diff view | Toggle between a single unified column and two side-by-side columns (old content on the left, new content on the right) in the staging and patch-building views.<br><br>The default can be changed in the config file with the key 'gui.useSplitDiffInStagingView'. |
 | `` o `` | Open bestand | Open bestand in standaardapplicatie. |
 | `` e `` | Verander bestand | Open bestand in externe editor. |
 | `` <space> `` | Voeg toe/verwijder lijn(en) in patch |  |
@@ -318,6 +319,7 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` v `` | Toggle drag selecteer |  |
 | `` a `` | Wissel tussen hunk selectie aan of uit | Wissel tussen regel-voor-regel of hunk selectie modus. |
 | `` <ctrl+o> `` | Copy selected text to clipboard |  |
+| `` s `` | Toggle split diff view | Toggle between a single unified column and two side-by-side columns (old content on the left, new content on the right) in the staging and patch-building views.<br><br>The default can be changed in the config file with the key 'gui.useSplitDiffInStagingView'. |
 | `` <space> `` | Toggle staged | Toggle lijnen staged / unstaged |
 | `` d `` | Verwijdert change (git reset) | When unstaged change is selected, discard the change using `git reset`. When staged change is selected, unstage the change. |
 | `` o `` | Open bestand | Open bestand in standaardapplicatie. |

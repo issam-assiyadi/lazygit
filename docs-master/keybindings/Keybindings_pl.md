@@ -141,6 +141,7 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` v `` | Przełącz zaznaczenie zakresu |  |
 | `` a `` | Toggle hunk selection | Toggle line-by-line vs. hunk selection mode. |
 | `` <ctrl+o> `` | Kopiuj zaznaczony tekst do schowka |  |
+| `` s `` | Toggle split diff view | Toggle between a single unified column and two side-by-side columns (old content on the left, new content on the right) in the staging and patch-building views.<br><br>The default can be changed in the config file with the key 'gui.useSplitDiffInStagingView'. |
 | `` o `` | Otwórz plik | Otwórz plik w domyślnej aplikacji. |
 | `` e `` | Edytuj plik | Otwórz plik w zewnętrznym edytorze. |
 | `` <space> `` | Przełącz linie w łatce |  |
@@ -229,6 +230,7 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` v `` | Przełącz zaznaczenie zakresu |  |
 | `` a `` | Toggle hunk selection | Toggle line-by-line vs. hunk selection mode. |
 | `` <ctrl+o> `` | Kopiuj zaznaczony tekst do schowka |  |
+| `` s `` | Toggle split diff view | Toggle between a single unified column and two side-by-side columns (old content on the left, new content on the right) in the staging and patch-building views.<br><br>The default can be changed in the config file with the key 'gui.useSplitDiffInStagingView'. |
 | `` <space> `` | Zatwierdź | Przełącz zaznaczenie zatwierdzone/niezatwierdzone. |
 | `` d `` | Odrzuć | Gdy zaznaczona jest niezatwierdzona zmiana, odrzuć ją używając `git reset`. Gdy zaznaczona jest zatwierdzona zmiana, cofnij zatwierdzenie. |
 | `` o `` | Otwórz plik | Otwórz plik w domyślnej aplikacji. |

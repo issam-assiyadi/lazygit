@@ -86,6 +86,7 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` v `` | Переключить выборку перетаскивания |  |
 | `` a `` | Toggle hunk selection | Toggle line-by-line vs. hunk selection mode. |
 | `` <ctrl+o> `` | Скопировать выделенный текст в буфер обмена |  |
+| `` s `` | Toggle split diff view | Toggle between a single unified column and two side-by-side columns (old content on the left, new content on the right) in the staging and patch-building views.<br><br>The default can be changed in the config file with the key 'gui.useSplitDiffInStagingView'. |
 | `` <space> `` | Переключить индекс | Переключить строку в проиндексированные / непроиндексированные |
 | `` d `` | Отменить изменение (git reset) | When unstaged change is selected, discard the change using `git reset`. When staged change is selected, unstage the change. |
 | `` o `` | Открыть файл | Open file in default application. |
@@ -134,6 +135,7 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` v `` | Переключить выборку перетаскивания |  |
 | `` a `` | Toggle hunk selection | Toggle line-by-line vs. hunk selection mode. |
 | `` <ctrl+o> `` | Скопировать выделенный текст в буфер обмена |  |
+| `` s `` | Toggle split diff view | Toggle between a single unified column and two side-by-side columns (old content on the left, new content on the right) in the staging and patch-building views.<br><br>The default can be changed in the config file with the key 'gui.useSplitDiffInStagingView'. |
 | `` o `` | Открыть файл | Open file in default application. |
 | `` e `` | Редактировать файл | Open file in external editor. |
 | `` <space> `` | Добавить/удалить строку(и) для патча |  |

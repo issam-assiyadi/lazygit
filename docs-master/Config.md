@@ -161,6 +161,12 @@ gui:
   # patch-building views.
   showLineNumbersInStagingView: true
 
+  # If true, render the staging and patch-building views as two side-by-side
+  # columns (old content on the left, new content on the right) instead of a
+  # single unified column. Can be toggled at runtime with 'toggleSplitDiffView'
+  # (default 's').
+  useSplitDiffInStagingView: false
+
   # One of 'auto' (default) | 'en' | 'zh-CN' | 'zh-TW' | 'pl' | 'nl' | 'ja' | 'ko'
   # | 'ru' | 'pt'
   language: auto
@@ -824,6 +830,7 @@ keybinding:
     toggleSelectHunk: a
     pickBothHunks: b
     editSelectHunk: E
+    toggleSplitDiffView: s
   submodules:
     init: i
     update: u

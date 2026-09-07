@@ -258,6 +258,7 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` v `` | 切换拖动选择 |  |
 | `` a `` | 切换代码块选择 | 切换逐行选择与代码块选择模式。 |
 | `` <ctrl+o> `` | 复制选中文本到剪贴板 |  |
+| `` s `` | Toggle split diff view | Toggle between a single unified column and two side-by-side columns (old content on the left, new content on the right) in the staging and patch-building views.<br><br>The default can be changed in the config file with the key 'gui.useSplitDiffInStagingView'. |
 | `` o `` | 打开文件 | 使用默认程序打开该文件 |
 | `` e `` | 编辑文件 | 使用外部编辑器打开文件 |
 | `` <space> `` | 添加/移除 行到补丁 |  |
@@ -314,6 +315,7 @@ _This file is auto-generated. To update, make the changes in the pkg/i18n direct
 | `` v `` | 切换拖动选择 |  |
 | `` a `` | 切换代码块选择 | 切换逐行选择与代码块选择模式。 |
 | `` <ctrl+o> `` | 复制选中文本到剪贴板 |  |
+| `` s `` | Toggle split diff view | Toggle between a single unified column and two side-by-side columns (old content on the left, new content on the right) in the staging and patch-building views.<br><br>The default can be changed in the config file with the key 'gui.useSplitDiffInStagingView'. |
 | `` <space> `` | 切换暂存状态 | 切换行暂存状态 |
 | `` d `` | 取消变更(git reset) | 当选择未暂存的变更时，使用git reset丢弃该变更。当选择已暂存的变更时，取消暂存该变更 |
 | `` o `` | 打开文件 | 使用默认程序打开该文件 |

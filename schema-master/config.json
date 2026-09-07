@@ -698,6 +698,11 @@
           "description": "If true, show old/new line numbers alongside each line in the staging and patch-building views.",
           "default": true
         },
+        "useSplitDiffInStagingView": {
+          "type": "boolean",
+          "description": "If true, render the staging and patch-building views as two side-by-side columns (old content on the left, new content on the right) instead of a single unified column. Can be toggled at runtime with 'toggleSplitDiffView' (default 's').",
+          "default": false
+        },
         "language": {
           "type": "string",
           "enum": [
@@ -2087,6 +2092,20 @@
             }
           ],
           "default": "E"
+        },
+        "toggleSplitDiffView": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "default": "s"
         }
       },
       "additionalProperties": false,
