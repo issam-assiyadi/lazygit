@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/jesseduffield/generics/set"
+	"github.com/jesseduffield/lazygit/pkg/gui/style"
+	"github.com/jesseduffield/lazygit/pkg/theme"
 	"github.com/jesseduffield/lazygit/pkg/utils"
 	"github.com/stretchr/testify/assert"
 )
@@ -869,6 +871,18 @@ index dcd3485..1ba5540 100644
  ...
  ...
 `, result)
+}
+
+func TestFormatHunkHeaderLine(t *testing.T) {
+	patch := Parse(exampleHunk)
+
+	result := patch.FormatView(FormatViewOpts{IncLineIndices: set.New[int]()})
+
+	numbersStyle := style.FgCyan.SetBold().MergeStyle(style.BgBlackLighter)
+	contextStyle := theme.DefaultTextColor.MergeStyle(style.BgBlackLighter)
+	expectedHeaderLine := numbersStyle.Sprint("@@ -1,5 +1,5 @@") + contextStyle.Sprint("")
+
+	assert.Contains(t, result, expectedHeaderLine+"\n")
 }
 
 func TestIsSingleHunkForWholeFile(t *testing.T) {

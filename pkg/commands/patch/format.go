@@ -92,21 +92,7 @@ func (self *patchPresenter) format() string {
 	}
 
 	for _, hunk := range self.patch.hunks {
-		appendLine(
-			self.formatLineAux(
-				hunk.formatHeaderStart(),
-				style.FgCyan,
-				false,
-			) +
-				// we're splitting the line into two parts: the diff header and the context
-				// We explicitly pass 'included' as false for both because these are not part
-				// of the actual patch
-				self.formatLineAux(
-					hunk.headerContext,
-					theme.DefaultTextColor,
-					false,
-				),
-		)
+		appendLine(self.formatHunkHeaderLine(hunk))
 
 		oldLine, newLine := hunk.oldStart, hunk.newStart
 		for _, line := range hunk.bodyLines {
@@ -163,6 +149,20 @@ func (self *patchPresenter) formatGutter(kind PatchLineKind, oldLine int, newLin
 
 	return oldStyle.Sprint(fmt.Sprintf("%*s", oldWidth, oldStr)) + " " +
 		newStyle.Sprint(fmt.Sprintf("%*s", newWidth, newStr)) + " "
+}
+
+// formats a hunk's "@@ -a,b +c,d @@ context" header line. The whole line
+// gets a subtle background so it reads as a section divider between hunks,
+// rather than just another colored line among the body lines.
+func (self *patchPresenter) formatHunkHeaderLine(hunk *Hunk) string {
+	if self.plain {
+		return hunk.formatHeaderLine()
+	}
+
+	numbersStyle := style.FgCyan.SetBold().MergeStyle(style.BgBlackLighter)
+	contextStyle := theme.DefaultTextColor.MergeStyle(style.BgBlackLighter)
+
+	return numbersStyle.Sprint(hunk.formatHeaderStart()) + contextStyle.Sprint(hunk.headerContext)
 }
 
 func (self *patchPresenter) patchLineStyle(patchLine *PatchLine) style.TextStyle {
