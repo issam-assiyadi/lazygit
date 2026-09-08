@@ -22,6 +22,14 @@ type FilesController struct {
 	baseController
 	*ListControllerTrait[*filetree.FileNode]
 	c *ControllerCommon
+
+	// lastSideBySideDiffKey tracks, per view name, the (path, cached) key
+	// last rendered by diffTask's side-by-side path - used to tell a
+	// genuine file switch (which should reset scroll to the top, like the
+	// external pty-based diff naturally does by starting a fresh command)
+	// apart from a same-file re-render triggered by something else, like a
+	// terminal resize (which should preserve the user's scroll position).
+	lastSideBySideDiffKey map[string]string
 }
 
 var _ types.IController = &FilesController{}
@@ -30,7 +38,8 @@ func NewFilesController(
 	c *ControllerCommon,
 ) *FilesController {
 	return &FilesController{
-		c: c,
+		c:                     c,
+		lastSideBySideDiffKey: map[string]string{},
 		ListControllerTrait: NewListControllerTrait(
 			c,
 			c.Contexts().Files,
@@ -411,7 +420,18 @@ func (self *FilesController) diffTask(node *filetree.FileNode, cached bool, path
 		diff := self.c.Git().WorkingTree.WorktreeFileDiff(node.File, true, cached)
 		p := patch.Parse(diff).SetFilename(node.GetPath())
 		rendered, _ := p.FormatSplitView(patch.FormatSplitViewOpts{ShowLineNumbers: true, Width: view.InnerWidth()})
-		return types.NewRenderStringWithoutScrollTask(rendered)
+
+		// This same render path also runs on a plain terminal resize (see
+		// layout.go's HandleRenderToMain call), which must NOT yank the
+		// user's scroll position back to the top - only a genuine file (or
+		// staged/unstaged side) switch should do that, matching how a fresh
+		// pty-based diff naturally starts unscrolled.
+		key := fmt.Sprintf("%s:%v", node.GetPath(), cached)
+		if self.lastSideBySideDiffKey[view.Name()] == key {
+			return types.NewRenderStringWithoutScrollTask(rendered)
+		}
+		self.lastSideBySideDiffKey[view.Name()] = key
+		return types.NewRenderStringTask(rendered)
 	}
 
 	cmdObj := self.c.Git().WorkingTree.WorktreeFileDiffCmdObj(node, false, cached, paths)
