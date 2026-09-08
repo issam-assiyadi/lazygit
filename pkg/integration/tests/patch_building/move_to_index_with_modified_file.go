@@ -35,7 +35,7 @@ var MoveToIndexWithModifiedFile = NewIntegrationTest(NewIntegrationTestArgs{
 
 		t.Views().Information().Content(Contains("Building patch"))
 
-		t.Views().Secondary().Content(Contains("-1\n+11"))
+		t.Views().Secondary().Content(Contains("1   -1\n  1 +11"))
 
 		t.Common().SelectPatchOption(Contains("Move patch out into index"))
 

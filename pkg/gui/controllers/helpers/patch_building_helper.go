@@ -78,19 +78,29 @@ func (self *PatchBuildingHelper) RefreshPatchBuildingPanel(opts types.OnFocusOpt
 		return
 	}
 
+	showLineNumbers := self.c.UserConfig().Gui.ShowLineNumbersInStagingView
+
+	// The interactive patch-building view always uses the unified renderer,
+	// regardless of Gui.UseSplitDiffInStagingView: that config only governs
+	// the read-only diff preview shown in the Files panel. See the same
+	// note in staging_helper.go.
+	splitMode := false
+
 	secondaryDiff := self.c.Git().Patch.PatchBuilder.RenderPatchForFile(patch.RenderPatchForFileOpts{
 		Filename:                               file.Path,
 		PreviousPath:                           file.PreviousPath,
 		Plain:                                  false,
 		Reverse:                                false,
 		TurnAddedFilesIntoDiffAgainstEmptyFile: true,
+		ShowLineNumbers:                        showLineNumbers,
+		Width:                                  self.c.Views().PatchBuildingSecondary.InnerWidth(),
 	})
 
 	context := self.c.Contexts().CustomPatchBuilder
 
 	oldState := context.GetState()
 
-	state := patch_exploring.NewState(diff, selectedLineIdx, context.GetView(), oldState, self.c.UserConfig().Gui.UseHunkModeInStagingView)
+	state := patch_exploring.NewState(diff, file.Path, showLineNumbers, selectedLineIdx, context.GetView(), oldState, self.c.UserConfig().Gui.UseHunkModeInStagingView, splitMode)
 	context.SetState(state)
 	if state == nil {
 		self.Escape()

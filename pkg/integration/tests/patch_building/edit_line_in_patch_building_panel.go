@@ -38,7 +38,7 @@ var EditLineInPatchBuildingPanel = NewIntegrationTest(NewIntegrationTestArgs{
 
 		t.Views().PatchBuilding().
 			IsFocused().
-			Content(Contains("+4\n+5\n+6")).
+			Content(Contains(" 1 +4\n 2 +5\n 3 +6")).
 			NavigateToLine(Contains("+5")).
 			Press(keys.Universal.Edit)
 

@@ -133,6 +133,10 @@ type GuiConfig struct {
 	WrapLinesInStagingView bool `yaml:"wrapLinesInStagingView"`
 	// If true, hunk selection mode will be enabled by default when entering the staging view.
 	UseHunkModeInStagingView bool `yaml:"useHunkModeInStagingView"`
+	// If true, show old/new line numbers alongside each line in the staging and patch-building views.
+	ShowLineNumbersInStagingView bool `yaml:"showLineNumbersInStagingView"`
+	// If true, render a file's diff preview (in the Files panel) as two side-by-side columns - old content on the left, new content on the right - instead of a single unified column. Only applies to the passive preview of a single selected file; the interactive staging and patch-building views (and previews of a selected directory) always use the unified renderer.
+	SideBySideDiffs bool `yaml:"sideBySideDiffs"`
 	// One of 'auto' (default) | 'en' | 'zh-CN' | 'zh-TW' | 'pl' | 'nl' | 'ja' | 'ko' | 'ru' | 'pt'
 	Language string `yaml:"language" jsonschema:"enum=auto,enum=en,enum=zh-TW,enum=zh-CN,enum=pl,enum=nl,enum=ja,enum=ko,enum=ru"`
 	// Format used when displaying time e.g. commit time.
@@ -874,13 +878,15 @@ func GetDefaultConfigForPlatform(platform string) *UserConfig {
 				{"commits", "reflog"},
 				{"stash"},
 			},
-			MainPanelSplitMode:       "flexible",
-			EnlargedSideViewLocation: "left",
-			WrapLinesInStagingView:   true,
-			UseHunkModeInStagingView: true,
-			Language:                 "auto",
-			TimeFormat:               "02 Jan 06",
-			ShortTimeFormat:          time.Kitchen,
+			MainPanelSplitMode:           "flexible",
+			EnlargedSideViewLocation:     "left",
+			WrapLinesInStagingView:       true,
+			UseHunkModeInStagingView:     true,
+			ShowLineNumbersInStagingView: true,
+			SideBySideDiffs:              false,
+			Language:                     "auto",
+			TimeFormat:                   "02 Jan 06",
+			ShortTimeFormat:              time.Kitchen,
 			Theme: ThemeConfig{
 				ActiveBorderColor:               []string{"green", "bold"},
 				SearchingActiveBorderColor:      []string{"cyan", "bold"},

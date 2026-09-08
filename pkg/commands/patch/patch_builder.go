@@ -208,6 +208,13 @@ type RenderPatchForFileOpts struct {
 	Plain                                  bool
 	Reverse                                bool
 	TurnAddedFilesIntoDiffAgainstEmptyFile bool
+	// Only used when Plain is false: whether to prefix each line with an
+	// old/new line-number gutter.
+	ShowLineNumbers bool
+	// Only used when Plain is false: the width of the view the patch is
+	// being rendered into, used to pad hunk header lines' background so it
+	// spans the whole view.
+	Width int
 }
 
 func (p *PatchBuilder) RenderPatchForFile(opts RenderPatchForFileOpts) string {
@@ -228,7 +235,47 @@ func (p *PatchBuilder) RenderPatchForFile(opts RenderPatchForFileOpts) string {
 		return info.diff
 	}
 
-	patch := Parse(info.diff).
+	patch := transformedPatchForFile(opts, info)
+
+	if opts.Plain {
+		return patch.FormatPlain()
+	}
+	return patch.FormatView(FormatViewOpts{ShowLineNumbers: opts.ShowLineNumbers, Width: opts.Width})
+}
+
+// RenderSplitPatchForFile is RenderPatchForFile's side-by-side counterpart:
+// same file selection/transform logic, but rendered as two columns (old
+// content left, new content right) via Patch.FormatSplitView instead of the
+// unified single-column FormatView. Plain output has no split-view
+// equivalent (it's not a view-only formatting choice, the patch fed to
+// `git apply` is always unified), so opts.Plain is ignored here.
+//
+// TEMPORARY: wired in unconditionally for now while the split view's
+// renderer is still being proved out (see the "split diff view" plan) -
+// this will become an opt-in mode in a later change.
+func (p *PatchBuilder) RenderSplitPatchForFile(opts RenderPatchForFileOpts) string {
+	info, err := p.getFileInfo(opts.Filename, opts.PreviousPath)
+	if err != nil {
+		p.Log.Error(err)
+		return ""
+	}
+
+	if info.mode == UNSELECTED {
+		return ""
+	}
+
+	patch := transformedPatchForFile(opts, info)
+
+	// the Secondary panel this is rendered into has no cursor, so the
+	// physical-row mapping isn't needed here (the interactive main-panel
+	// split view does need it, and consumes FormatSplitView directly).
+	rendered, _ := patch.FormatSplitView(FormatSplitViewOpts{ShowLineNumbers: opts.ShowLineNumbers, Width: opts.Width})
+	return rendered
+}
+
+func transformedPatchForFile(opts RenderPatchForFileOpts, info *fileInfo) *Patch {
+	return Parse(info.diff).
+		SetFilename(opts.Filename).
 		Transform(TransformOpts{
 			Reverse:                                opts.Reverse,
 			TurnAddedFilesIntoDiffAgainstEmptyFile: opts.TurnAddedFilesIntoDiffAgainstEmptyFile,
@@ -239,14 +286,9 @@ func (p *PatchBuilder) RenderPatchForFile(opts RenderPatchForFileOpts) string {
 			StripRename:         info.mode == PART && info.previousPath != "",
 			IncludedLineIndices: info.includedLineIndices,
 		})
-
-	if opts.Plain {
-		return patch.FormatPlain()
-	}
-	return patch.FormatView(FormatViewOpts{})
 }
 
-func (p *PatchBuilder) renderEachFilePatch(plain bool) []string {
+func (p *PatchBuilder) renderEachFilePatch(plain bool, showLineNumbers bool, width int) []string {
 	fileInfoMap := p.snapshotFileInfoMap()
 
 	// sort files by name then iterate through and render each patch
@@ -260,6 +302,8 @@ func (p *PatchBuilder) renderEachFilePatch(plain bool) []string {
 			Plain:                                  plain,
 			Reverse:                                false,
 			TurnAddedFilesIntoDiffAgainstEmptyFile: true,
+			ShowLineNumbers:                        showLineNumbers,
+			Width:                                  width,
 		})
 	})
 	output := lo.Filter(patches, func(patch string, _ int) bool {
@@ -269,8 +313,10 @@ func (p *PatchBuilder) renderEachFilePatch(plain bool) []string {
 	return output
 }
 
-func (p *PatchBuilder) RenderAggregatedPatch(plain bool) string {
-	return strings.Join(p.renderEachFilePatch(plain), "")
+// RenderAggregatedPatch renders the patch across all files that have changes
+// selected. showLineNumbers and width are ignored when plain is true.
+func (p *PatchBuilder) RenderAggregatedPatch(plain bool, showLineNumbers bool, width int) string {
+	return strings.Join(p.renderEachFilePatch(plain, showLineNumbers, width), "")
 }
 
 func (p *PatchBuilder) GetFileStatus(filename string, parent string) PatchStatus {

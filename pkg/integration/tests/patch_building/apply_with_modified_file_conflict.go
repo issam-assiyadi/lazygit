@@ -49,7 +49,7 @@ var ApplyWithModifiedFileConflict = NewIntegrationTest(NewIntegrationTestArgs{
 
 		t.Views().Information().Content(Contains("Building patch"))
 
-		t.Views().Secondary().Content(Contains("-1\n+11\n"))
+		t.Views().Secondary().Content(Contains("1   -1\n  1 +11\n"))
 
 		t.Common().SelectPatchOption(MatchesRegexp(`Apply patch$`))
 

@@ -9,6 +9,7 @@ import (
 	"github.com/jesseduffield/generics/set"
 	"github.com/jesseduffield/lazygit/pkg/commands/git_commands"
 	"github.com/jesseduffield/lazygit/pkg/commands/models"
+	"github.com/jesseduffield/lazygit/pkg/commands/patch"
 	"github.com/jesseduffield/lazygit/pkg/gocui"
 	"github.com/jesseduffield/lazygit/pkg/gui/context"
 	"github.com/jesseduffield/lazygit/pkg/gui/filetree"
@@ -21,6 +22,14 @@ type FilesController struct {
 	baseController
 	*ListControllerTrait[*filetree.FileNode]
 	c *ControllerCommon
+
+	// lastSideBySideDiffKey tracks, per view name, the (path, cached) key
+	// last rendered by diffTask's side-by-side path - used to tell a
+	// genuine file switch (which should reset scroll to the top, like the
+	// external pty-based diff naturally does by starting a fresh command)
+	// apart from a same-file re-render triggered by something else, like a
+	// terminal resize (which should preserve the user's scroll position).
+	lastSideBySideDiffKey map[string]string
 }
 
 var _ types.IController = &FilesController{}
@@ -29,7 +38,8 @@ func NewFilesController(
 	c *ControllerCommon,
 ) *FilesController {
 	return &FilesController{
-		c: c,
+		c:                     c,
+		lastSideBySideDiffKey: map[string]string{},
 		ListControllerTrait: NewListControllerTrait(
 			c,
 			c.Contexts().Files,
@@ -370,7 +380,6 @@ func (self *FilesController) renderWorkingTreeDiff(node *filetree.FileNode) {
 	mainShowsStaged := !split && node.GetHasStagedChanges()
 
 	paths := self.pathsForDiff(node)
-	cmdObj := self.c.Git().WorkingTree.WorktreeFileDiffCmdObj(node, false, mainShowsStaged, paths)
 	title := self.c.Tr.UnstagedChanges
 	if mainShowsStaged {
 		title = self.c.Tr.StagedChanges
@@ -378,15 +387,13 @@ func (self *FilesController) renderWorkingTreeDiff(node *filetree.FileNode) {
 	refreshOpts := types.RefreshMainOpts{
 		Pair: self.c.MainViewPairs().Normal,
 		Main: &types.ViewUpdateOpts{
-			Task:     types.NewRunPtyTask(cmdObj.GetCmd()),
+			Task:     self.diffTask(node, mainShowsStaged, paths, self.c.Views().Main),
 			SubTitle: self.c.Helpers().Diff.IgnoringWhitespaceSubTitle(),
 			Title:    title,
 		},
 	}
 
 	if split {
-		cmdObj := self.c.Git().WorkingTree.WorktreeFileDiffCmdObj(node, false, true, paths)
-
 		title := self.c.Tr.StagedChanges
 		if mainShowsStaged {
 			title = self.c.Tr.UnstagedChanges
@@ -395,11 +402,40 @@ func (self *FilesController) renderWorkingTreeDiff(node *filetree.FileNode) {
 		refreshOpts.Secondary = &types.ViewUpdateOpts{
 			Title:    title,
 			SubTitle: self.c.Helpers().Diff.IgnoringWhitespaceSubTitle(),
-			Task:     types.NewRunPtyTask(cmdObj.GetCmd()),
+			Task:     self.diffTask(node, true, paths, self.c.Views().Secondary),
 		}
 	}
 
 	self.c.RenderToMainViews(refreshOpts)
+}
+
+// diffTask picks the render for one side of the working-tree diff view.
+// Side-by-side rendering only applies to a single selected file (not a
+// selected directory, which diffs multiple paths at once and isn't
+// representable as one patch.Patch), and bypasses the external
+// diffRenderers pty pipeline (delta/hunk etc.) entirely, since that's a
+// separate rendering mechanism from the native split-view renderer.
+func (self *FilesController) diffTask(node *filetree.FileNode, cached bool, paths []string, view *gocui.View) types.UpdateTask {
+	if self.c.UserConfig().Gui.SideBySideDiffs && node.GetIsFile() {
+		diff := self.c.Git().WorkingTree.WorktreeFileDiff(node.File, true, cached)
+		p := patch.Parse(diff).SetFilename(node.GetPath())
+		rendered, _ := p.FormatSplitView(patch.FormatSplitViewOpts{ShowLineNumbers: true, Width: view.InnerWidth()})
+
+		// This same render path also runs on a plain terminal resize (see
+		// layout.go's HandleRenderToMain call), which must NOT yank the
+		// user's scroll position back to the top - only a genuine file (or
+		// staged/unstaged side) switch should do that, matching how a fresh
+		// pty-based diff naturally starts unscrolled.
+		key := fmt.Sprintf("%s:%v", node.GetPath(), cached)
+		if self.lastSideBySideDiffKey[view.Name()] == key {
+			return types.NewRenderStringWithoutScrollTask(rendered)
+		}
+		self.lastSideBySideDiffKey[view.Name()] = key
+		return types.NewRenderStringTask(rendered)
+	}
+
+	cmdObj := self.c.Git().WorkingTree.WorktreeFileDiffCmdObj(node, false, cached, paths)
+	return types.NewRunPtyTask(cmdObj.GetCmd())
 }
 
 func (self *FilesController) GetOnDoubleClick() func() error {

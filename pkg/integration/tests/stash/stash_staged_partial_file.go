@@ -23,11 +23,11 @@ var StashStagedPartialFile = NewIntegrationTest(NewIntegrationTestArgs{
 
 		t.Views().Staging().
 			Content(
-				Contains(" line1\n-line2\n+line2 mod\n line3\n-line4\n+line4 mod"),
+				Contains("1 1  line1\n2   -line2\n  2 +line2 mod\n3 3  line3\n4   -line4\n  4 +line4 mod"),
 			).
 			PressPrimaryAction().
 			Content(
-				Contains(" line1\n line2 mod\n line3\n-line4\n+line4 mod"),
+				Contains("1 1  line1\n2 2  line2 mod\n3 3  line3\n4   -line4\n  4 +line4 mod"),
 			).
 			PressEscape()
 

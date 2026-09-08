@@ -14,6 +14,12 @@ type StartArgs struct {
 	FilterPath string
 	// ScreenMode determines the initial Screen Mode (normal, half or full) to use
 	ScreenMode string
+	// SideBySideDiffs, if true, overrides Gui.SideBySideDiffs for this run only
+	// (see the --side-by-side CLI flag). Kept separate from UserConfig because
+	// the user config gets reloaded from disk on every repo entry/switch and
+	// whenever the config file changes, which would otherwise silently wipe an
+	// in-memory-only override.
+	SideBySideDiffs bool
 }
 
 type GitArg string
@@ -26,11 +32,12 @@ const (
 	GitArgStash  GitArg = "stash"
 )
 
-func NewStartArgs(filterPath string, gitArg GitArg, screenMode string, test integrationTypes.IntegrationTest) StartArgs {
+func NewStartArgs(filterPath string, gitArg GitArg, screenMode string, sideBySideDiffs bool, test integrationTypes.IntegrationTest) StartArgs {
 	return StartArgs{
 		FilterPath:      filterPath,
 		GitArg:          gitArg,
 		ScreenMode:      screenMode,
+		SideBySideDiffs: sideBySideDiffs,
 		IntegrationTest: test,
 	}
 }

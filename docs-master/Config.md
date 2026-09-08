@@ -157,6 +157,17 @@ gui:
   # staging view.
   useHunkModeInStagingView: true
 
+  # If true, show old/new line numbers alongside each line in the staging and
+  # patch-building views.
+  showLineNumbersInStagingView: true
+
+  # If true, render a file's diff preview (in the Files panel) as two side-by-side
+  # columns - old content on the left, new content on the right - instead of a
+  # single unified column. Only applies to the passive preview of a single
+  # selected file; the interactive staging and patch-building views (and previews
+  # of a selected directory) always use the unified renderer.
+  sideBySideDiffs: false
+
   # One of 'auto' (default) | 'en' | 'zh-CN' | 'zh-TW' | 'pl' | 'nl' | 'ja' | 'ko'
   # | 'ru' | 'pt'
   language: auto
