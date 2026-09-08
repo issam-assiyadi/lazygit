@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gookit/color"
 	"github.com/jesseduffield/generics/set"
 	"github.com/jesseduffield/lazygit/pkg/gui/style"
 	"github.com/jesseduffield/lazygit/pkg/theme"
@@ -18,6 +19,40 @@ import (
 const splitDivider = " │ "
 
 var splitDividerWidth = uniseg.StringWidth(splitDivider)
+
+// dark, muted red/green row backgrounds for added/removed lines in the
+// split view - color-matched to the hunk reference tool's own diff view
+// (sampled: additions rgb(35,48,38), deletions rgb(52,38,38)). A plain RGB
+// background here would force TextStyle to promote the whole style to
+// 24-bit RGB the moment either its fg or bg is RGB (see deriveStyle), which
+// would silently reinterpret patchLineStyle's basic-palette FgRed/FgGreen
+// through gookit's fixed RGB approximation of "red"/"green" instead of the
+// terminal's own theme colors - a real color shift, not a rendering quirk.
+// NewFixedRGBColor avoids that promotion (see TextStyle.deriveMixedStyle),
+// so the basic fg text keeps rendering in the terminal's own theme color
+// while the background still gets this exact muted tint, distinct from
+// style.BgGreen's brighter "included in patch" indicator.
+var (
+	splitViewAdditionBg = style.New().SetBg(style.NewFixedRGBColor(color.RGB(35, 48, 38, true)))
+	splitViewDeletionBg = style.New().SetBg(style.NewFixedRGBColor(color.RGB(52, 38, 38, true)))
+)
+
+// splitViewRowBg returns the row background for a line, and whether one
+// applies at all (context/header lines get none): the brighter "included in
+// patch" indicator if included, else the kind-based tint above.
+func splitViewRowBg(kind PatchLineKind, included bool) (style.TextStyle, bool) {
+	if included {
+		return style.BgGreen, true
+	}
+	switch kind {
+	case ADDITION:
+		return splitViewAdditionBg, true
+	case DELETION:
+		return splitViewDeletionBg, true
+	default:
+		return style.TextStyle{}, false
+	}
+}
 
 type FormatSplitViewOpts struct {
 	// if true, prefix each column's body lines with their own single-number
@@ -216,18 +251,25 @@ func cellLineAt(cell []cellLine, i int) cellLine {
 // gutter) and prefixing the first physical row with the line's
 // single-number gutter (continuation rows get a blank gutter of the same
 // width, matching how the unified view's gutter is only ever shown once per
-// logical line). If included, a green background is layered onto the whole
-// cell (gutter and content alike), on every wrapped continuation row too.
+// logical line). An added/removed line's row background (see
+// splitViewRowBg - the brighter included-in-patch green if included, else a
+// dark per-kind tint) is layered across the whole cell - gutter, content,
+// and the padding out to contentWidth alike - on every wrapped continuation
+// row too, so the tint reaches the divider with no unstyled gap.
 func renderSplitCell(line *PatchLine, spans highlightedLine, changed *byteRange, lineNumber int, gutterWidth int, contentWidth int, included bool) []cellLine {
 	rest := lineContentWithoutSign(line)
 	lineStyle := patchLineStyle(line)
 	finalSpans := applyChangeEmphasis(rest, spans, lineStyle, changed)
-	if included {
-		finalSpans = mergeStyleOntoSpans(finalSpans, style.BgGreen)
+	rowBg, hasRowBg := splitViewRowBg(line.Kind, included)
+	if hasRowBg {
+		finalSpans = mergeStyleOntoSpans(finalSpans, rowBg)
 	}
 
 	gutter := formatSplitGutter(line.Kind, lineNumber, gutterWidth, included)
 	blankGutter := strings.Repeat(" ", gutterWidth)
+	if hasRowBg {
+		blankGutter = rowBg.Sprint(blankGutter)
+	}
 
 	// WrapViewLinesToWidth expands tabs to spaces internally before wrapping,
 	// so its returned chunks are substrings of a tab-expanded copy of rest,
@@ -251,9 +293,22 @@ func renderSplitCell(line *PatchLine, spans highlightedLine, changed *byteRange,
 		}
 
 		contentText := renderSpans(sliceSpans(finalSpans, origOffset[start], origOffset[end]))
+
+		// pad out to contentWidth here (rather than leaving it to the
+		// caller) so a row background reaches the full column width instead
+		// of stopping at the text - otherwise the tint would leave a plain,
+		// unstyled gap between the text and the divider.
+		if padWidth := contentWidth - uniseg.StringWidth(chunk); padWidth > 0 {
+			pad := strings.Repeat(" ", padWidth)
+			if hasRowBg {
+				pad = rowBg.Sprint(pad)
+			}
+			contentText += pad
+		}
+
 		result = append(result, cellLine{
 			text:  rowGutter + contentText,
-			width: gutterWidth + uniseg.StringWidth(chunk),
+			width: gutterWidth + max(uniseg.StringWidth(chunk), contentWidth),
 		})
 	}
 	return result
@@ -323,8 +378,8 @@ func formatSplitGutter(kind PatchLineKind, lineNumber int, width int, included b
 	case NEWLINE_MESSAGE, HUNK_HEADER, PATCH_HEADER:
 		// no line number for these
 	}
-	if included {
-		lineStyle = lineStyle.MergeStyle(style.BgGreen)
+	if rowBg, ok := splitViewRowBg(kind, included); ok {
+		lineStyle = lineStyle.MergeStyle(rowBg)
 	}
 
 	// the trailing space is styled along with the number (rather than

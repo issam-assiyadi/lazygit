@@ -164,14 +164,36 @@ func TestFormatSplitGutterZeroWidth(t *testing.T) {
 }
 
 func TestFormatSplitGutterStylesByKind(t *testing.T) {
-	assert.Equal(t, style.FgRed.Sprint(" 9 "), formatSplitGutter(DELETION, 9, 3, false))
-	assert.Equal(t, style.FgGreen.Sprint(" 9 "), formatSplitGutter(ADDITION, 9, 3, false))
+	assert.Equal(t, style.FgRed.MergeStyle(splitViewDeletionBg).Sprint(" 9 "), formatSplitGutter(DELETION, 9, 3, false))
+	assert.Equal(t, style.FgGreen.MergeStyle(splitViewAdditionBg).Sprint(" 9 "), formatSplitGutter(ADDITION, 9, 3, false))
 	assert.Equal(t, style.FgBlackLighter.Sprint(" 9 "), formatSplitGutter(CONTEXT, 9, 3, false))
 	assert.Equal(t, style.FgBlackLighter.Sprint("   "), formatSplitGutter(HUNK_HEADER, 9, 3, false))
 }
 
+// Staging a line (included) overrides the row tint above with the brighter
+// BgGreen "included" indicator, rather than stacking both.
 func TestFormatSplitGutterIncludedAddsBackground(t *testing.T) {
 	assert.Equal(t, style.FgRed.MergeStyle(style.BgGreen).Sprint(" 9 "), formatSplitGutter(DELETION, 9, 3, true))
+}
+
+// Regression test for a real color bug: TextStyle promotes an entire style
+// to 24-bit RGB the moment either its fg or bg is RGB (see
+// TextStyle.deriveStyle), so pairing an RGB row background with the basic
+// FgRed/FgGreen patchLineStyle already uses would silently reinterpret that
+// basic color through gookit's own fixed RGB approximation instead of the
+// terminal's actual theme color. splitViewAdditionBg/splitViewDeletionBg use
+// an 8-bit (256-color) background instead, which TextStyle.deriveStyle keeps
+// separate from the RGB-promotion path (see derive256Style) - verify the fg
+// code in the rendered output is still the plain basic ANSI code (31/32),
+// not a 24-bit "38;2;..." sequence.
+func TestSplitViewRowBgKeepsBasicForegroundIntact(t *testing.T) {
+	rendered := style.FgRed.MergeStyle(splitViewDeletionBg).Sprint("x")
+	assert.Contains(t, rendered, "\x1b[31;")
+	assert.NotContains(t, rendered, "38;2;")
+
+	rendered = style.FgGreen.MergeStyle(splitViewAdditionBg).Sprint("x")
+	assert.Contains(t, rendered, "\x1b[32;")
+	assert.NotContains(t, rendered, "38;2;")
 }
 
 // Regression test for a bug where context lines (and unpaired change lines)

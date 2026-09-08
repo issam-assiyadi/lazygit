@@ -1,6 +1,9 @@
 package style
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/gookit/color"
 )
 
@@ -114,6 +117,11 @@ func (b TextStyle) deriveStyle() Sprinter {
 		return color.Style(b.decoration.ToOpts())
 	}
 
+	noPromote := (b.fg != nil && b.fg.noPromote) || (b.bg != nil && b.bg.noPromote)
+	if noPromote {
+		return b.deriveMixedStyle()
+	}
+
 	isRgb := (b.fg != nil && b.fg.IsRGB()) || (b.bg != nil && b.bg.IsRGB())
 	if isRgb {
 		return b.deriveRGBStyle()
@@ -154,4 +162,51 @@ func (b TextStyle) deriveRGBStyle() *color.RGBStyle {
 	style.SetOpts(b.decoration.ToOpts())
 
 	return style
+}
+
+// deriveMixedStyle builds a raw SGR code from whichever representation each
+// channel actually holds (basic 16-color, or a NewFixedRGBColor's 24-bit
+// RGB) - unlike deriveRGBStyle, it never promotes a basic-palette channel to
+// a different color space, so a basic foreground paired with a
+// NewFixedRGBColor background keeps rendering through the terminal's own
+// theme color for that foreground.
+func (b TextStyle) deriveMixedStyle() Sprinter {
+	codes := make([]string, 0, 4)
+	if code := colorCode(b.fg); code != "" {
+		codes = append(codes, code)
+	}
+	if code := colorCode(b.bg); code != "" {
+		codes = append(codes, code)
+	}
+	for _, opt := range b.decoration.ToOpts() {
+		codes = append(codes, opt.String())
+	}
+
+	return rawCodeStyle(strings.Join(codes, ";"))
+}
+
+func colorCode(c *Color) string {
+	switch {
+	case c == nil:
+		return ""
+	case c.rgb != nil:
+		return c.rgb.String()
+	case c.basic != nil:
+		return c.basic.String()
+	default:
+		return ""
+	}
+}
+
+// rawCodeStyle is a Sprinter over an already-assembled SGR code string,
+// bypassing gookit's own Style/RGBStyle types (both of which assume every
+// channel is in the same color space).
+type rawCodeStyle string
+
+func (s rawCodeStyle) Sprint(a ...any) string {
+	return color.RenderCode(string(s), a...)
+}
+
+func (s rawCodeStyle) Sprintf(format string, a ...any) string {
+	return color.RenderString(string(s), fmt.Sprintf(format, a...))
 }

@@ -28,6 +28,8 @@ func TestMerge(t *testing.T) {
 	rgbYellowLib := color.Rgb(0xFF, 0xFF, 0x00)
 	rgbYellow := NewRGBColor(rgbYellowLib)
 
+	fixedGreen := NewFixedRGBColor(color.RGB(35, 48, 38, true))
+
 	strToPrint := "foo"
 
 	scenarios := []scenario{
@@ -154,6 +156,29 @@ func TestMerge(t *testing.T) {
 				).SetOpts(color.Opts{}),
 			},
 			"\x1b[38;2;197;30;20;48;2;255;255;0mfoo\x1b[0m",
+		},
+		{
+			"fixed (non-promoting) rgb bg color",
+			[]TextStyle{New().SetBg(fixedGreen)},
+			TextStyle{
+				bg:    &fixedGreen,
+				Style: rawCodeStyle("48;2;35;48;38"),
+			},
+			"\x1b[48;2;35;48;38mfoo\x1b[0m",
+		},
+		{
+			// unlike mixing a basic color with a normal (promoting) rgb
+			// color, this must NOT promote fgRed to RGB - see
+			// TestSplitViewRowBgKeepsBasicForegroundIntact in
+			// pkg/commands/patch for the real bug this covers.
+			"mix color-16 (foreground) with fixed rgb (background)",
+			[]TextStyle{FgRed, New().SetBg(fixedGreen)},
+			TextStyle{
+				fg:    &Color{basic: &fgRed},
+				bg:    &fixedGreen,
+				Style: rawCodeStyle("31;48;2;35;48;38"),
+			},
+			"\x1b[31;48;2;35;48;38mfoo\x1b[0m",
 		},
 	}
 
