@@ -194,6 +194,20 @@ func TestFormatSplitViewRendersContextLineContent(t *testing.T) {
 // line is not a literal substring of the unexpanded line - reconstructing
 // its byte offset via a naive strings.Index into the original line could
 // return -1, producing an inverted (start > end) slice and panicking.
+// Regression test: expandTabsWithOffsetMap must expand each tab relative to
+// the already-expanded output's own column, not to the original string's
+// byte index - otherwise a second (or later) tab on the same line, which
+// starts at a byte index lower than its true visual column, expands short.
+func TestExpandTabsWithOffsetMapConsecutiveTabs(t *testing.T) {
+	expanded, offsets := expandTabsWithOffsetMap("\t\tx", 4)
+
+	// two tabs from column 0 land on true 4-column stops: 4 spaces, then 4
+	// more (not 3, which is what indexing by original byte index 1 would
+	// give for the second tab)
+	assert.Equal(t, "        x", expanded)
+	assert.Len(t, offsets, len(expanded)+1)
+}
+
 func TestFormatSplitViewWrapsTabContainingLineWithoutPanicking(t *testing.T) {
 	diff := "diff --git a/f b/f\n--- a/f\n+++ b/f\n@@ -1,1 +1,1 @@\n-old\n+a\ta\ta\ta\ta\ta\ta\ta\ta\ta\ta\ta\ta\ta\t very long line many tabs wrap across rows for sure yes\n"
 
@@ -258,6 +272,48 @@ func TestFormatSplitViewAlignsModifiedLine(t *testing.T) {
 		{Old: 5, New: 6},
 		{Old: 7, New: 7},
 	}, rows)
+}
+
+// visualColumnOf returns the on-screen column of the first occurrence of
+// target in a decolorised, tab-unexpanded line, simulating real terminal tab
+// expansion (4-column stops from column 0) - unlike a plain rune index, this
+// matches what a viewer actually sees, which is what a divider-alignment
+// check needs when rows contain differing numbers of tabs.
+func visualColumnOf(line string, target rune) int {
+	col := 0
+	for _, r := range line {
+		if r == target {
+			return col
+		}
+		if r == '\t' {
+			col += 4 - (col % 4)
+		} else {
+			col++
+		}
+	}
+	return -1
+}
+
+// Regression test for a real bug: two rows with different indentation levels
+// (so different tab counts) rendered their dividers at different visual
+// columns, because expandTabsWithOffsetMap under-counted every tab after the
+// first one on a line (see TestExpandTabsWithOffsetMapConsecutiveTabs).
+func TestFormatSplitViewAlignsColumnsAcrossDifferingTabCounts(t *testing.T) {
+	diff := "diff --git a/f b/f\n--- a/f\n+++ b/f\n@@ -1,2 +1,2 @@\n-\t\ttwo tabs\n+\t\ttwo tabs!\n \tone tab\n"
+
+	patch := Parse(diff)
+	rendered, _ := patch.FormatSplitView(FormatSplitViewOpts{ShowLineNumbers: true, Width: 60})
+	lines := utils.SplitLines(utils.Decolorise(rendered))
+
+	dividerCol := -1
+	for _, line := range lines[4:] {
+		col := visualColumnOf(line, '│')
+		if dividerCol == -1 {
+			dividerCol = col
+		} else {
+			assert.Equal(t, dividerCol, col, "divider must land on the same visual column regardless of a row's tab count: %q", line)
+		}
+	}
 }
 
 // The global patch-line indices FormatSplitView emits must agree with

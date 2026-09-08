@@ -265,8 +265,10 @@ func renderSplitCell(line *PatchLine, spans highlightedLine, changed *byteRange,
 const splitViewTabWidth = 4
 
 // expandTabsWithOffsetMap returns a copy of s with tabs expanded to spaces
-// (mirroring WrapViewLinesToWidth's own per-line tab expansion exactly, so
-// the chunks it returns are substrings of the expanded copy), plus a map
+// (mirroring WrapViewLinesToWidth's own per-line tab expansion exactly - tab
+// stops are counted from the expanded output's own visual column, not from
+// s's original byte index, so consecutive tabs still land on true 4-column
+// stops - so the chunks it returns are substrings of the expanded copy), plus a map
 // from each byte offset in the expanded copy back to the offset in s that
 // produced it - length len(expanded)+1, with the final entry equal to
 // len(s), so both a chunk's start and its (exclusive) end can be mapped.
@@ -279,7 +281,12 @@ func expandTabsWithOffsetMap(s string, tabWidth int) (string, []int) {
 	offsets := make([]int, 0, len(s)+1)
 	for i := range len(s) {
 		if s[i] == '\t' {
-			numSpaces := tabWidth - (i % tabWidth)
+			// tab stops are relative to the expanded output's current visual
+			// column (b.Len()), not i (s's own, pre-expansion byte index) -
+			// using i here would under-count every tab after the first one on
+			// a line, since preceding tabs already expanded to more than one
+			// column each.
+			numSpaces := tabWidth - (b.Len() % tabWidth)
 			for range numSpaces {
 				offsets = append(offsets, i)
 				b.WriteByte(' ')
